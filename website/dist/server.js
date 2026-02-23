@@ -23,8 +23,8 @@ app.post('/login', (req, res) => {
         res.status(401).json({ success: false, message: 'Invalid username or password.' });
     }
 });
-// 4. START SERVER
+//Starts the servver
 app.listen(PORT, '127.0.0.1', () => {
-    console.log(`🚀 Server is running!`);
-    console.log(`🔗 Access your site at: http://localhost:${PORT}`);
+    console.log(`Server is running!`);
+    console.log(`Access your site at: http://127.0.0.1:${PORT}/`);
 });

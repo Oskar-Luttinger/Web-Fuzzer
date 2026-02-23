@@ -19,9 +19,16 @@ loginBtn?.addEventListener('click', async () => {
         //Send updates to the user
         if (messageElement) {
             messageElement.innerText = data.message;
-            messageElement.style.color = data.success ? 'green' : 'red';
+            messageElement.classList.remove('success', 'error');
+            messageElement.classList.add(data.success ? 'success' : 'error');
         }
 
+        if (data.success) {
+         setTimeout(() => {
+            window.location.href = "/website.html";
+         }, 1000);
+        }
+        
     } catch (error) {
         console.error("Connection failed:", error);
         if (messageElement) messageElement.innerText = "Server is offline.";

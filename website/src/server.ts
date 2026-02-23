@@ -20,7 +20,7 @@ app.post('/login', (req, res) => {
     if (user === 'admin' && pass === '1234') {
         res.status(200).json({ success: true, message: 'Succes, logged in' });
     } else {
-        res.status(401).json({ success: false, message: 'Invalid username or password.' });
+        res.status(401).json({ success: false, message: 'Invalid username or password.' }); 
     }
 });
 

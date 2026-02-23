@@ -9,23 +9,28 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 const loginBtn = document.getElementById('loginBtn');
 loginBtn === null || loginBtn === void 0 ? void 0 : loginBtn.addEventListener('click', () => __awaiter(this, void 0, void 0, function* () {
-    // 1. Grab the values from your HTML inputs
+    //Gets the input from the HTML file
     const user = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
     const messageElement = document.getElementById('message');
     try {
-        // 2. Send the data to your server.ts
-        // We use '/login' because the server is hosting the HTML and the API together
+        //Sends the data to the server file
         const response = yield fetch('/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user, pass })
         });
         const data = yield response.json();
-        // 3. Show the result to the user
+        //Send updates to the user
         if (messageElement) {
             messageElement.innerText = data.message;
-            messageElement.style.color = data.success ? 'green' : 'red';
+            messageElement.classList.remove('success', 'error');
+            messageElement.classList.add(data.success ? 'success' : 'error');
+        }
+        if (data.success) {
+            setTimeout(() => {
+                window.location.href = "/website.html";
+            }, 1000);
         }
     }
     catch (error) {
