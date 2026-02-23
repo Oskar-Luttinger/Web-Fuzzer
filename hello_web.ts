@@ -9,9 +9,9 @@ const payload: string = fs.readFileSync(args.path, 'utf-8');
 const url: string = args.url
 const wordlist_unparsed: string = fs.readFileSync(args.list, 'utf-8');
 
+ 
 
-
-function send_raw(payload: string, urlstr: string, wordlist: Array<String>): void {
+export function send_raw(payload: string, urlstr: string, wordlist: Array<String>): void {
     const url = new URL(urlstr)
     const socket = net.createConnection({host : url.hostname, port : Number(url.port)}, () => {
         console.log('Connected to server!')
@@ -28,3 +28,6 @@ function send_raw(payload: string, urlstr: string, wordlist: Array<String>): voi
     socket.on('error', console.error);
 }
 
+export function send(socket, payload) {
+    socket.write(payload, utf-8)
+}
