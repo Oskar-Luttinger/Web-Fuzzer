@@ -25,10 +25,10 @@ loginBtn?.addEventListener('click', async () => {
 
         if (data.success) {
          setTimeout(() => {
-            window.location.href = "/website.html";
+            window.location.href = "public/website.html";
          }, 1000);
         }
-        
+
     } catch (error) {
         console.error("Connection failed:", error);
         if (messageElement) messageElement.innerText = "Server is offline.";
