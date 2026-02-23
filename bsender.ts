@@ -31,28 +31,7 @@ export function inject(request : string, keyword: string, fuzzmarker?: string): 
     return payload
 } 
 
-function worker(url: URL, wordlist: Array<string>, request: string, fuzzmarker?: string): void {
-    console.log(url.hostname, Number(url.port))
-    const wsocket = net.connect({host : url.hostname, port: Number(url.port)}, () => {
-        wsocket.on('connect', () => {
-            console.log('connected to server!')
-            while (wordlist.length !== 1 || wordlist === undefined) {
-                const keyword = wordlist.shift()
-                if (keyword !== undefined) {
-                    let payload = inject(request, keyword, fuzzmarker)
-                    wsocket.write(payload, 'utf-8')
-                    wsocket.on('data', (data)=> {
-                        const data_len = data.length
-                        const resp_code = Number(data.slice(8, 12))
-                        const entry: Array<string|number> = [keyword, data_len, resp_code]
-                        result_table.push(entry)
-                    })
-                    wsocket.on('error', console.error)
-                }
-            }
-        })
-    })
-}
+
 
 let result_table: Array<Array<string|number>> = []
 
@@ -64,10 +43,11 @@ function main() {
     const url = new URL(args.url)
     const passwords: string = fs.readFileSync(args.wlist, 'utf-8'); 
     let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== "");
-    worker(url, wlist, content, 'FUZZ')
     console.log(result_table)
 
 }
+
+
 
 
 

@@ -24,31 +24,24 @@ function inject(request, keyword, fuzzmarker) {
     var payload = prefix + keyword + suffix;
     return payload;
 }
-function worker(url, wordlist, request, fuzzmarker) {
-    console.log(url.hostname, Number(url.port));
-    var wsocket = net_1.connect({ host: url.hostname, port: Number(url.port) }, function () {
-        wsocket.on('connect', function () {
-            console.log('connected to server!');
-            var _loop_1 = function () {
-                var keyword = wordlist.shift();
-                if (keyword !== undefined) {
-                    var payload = inject(request, keyword, fuzzmarker);
-                    wsocket.write(payload, 'utf-8');
-                    wsocket.on('data', function (data) {
-                        var data_len = data.length;
-                        var resp_code = Number(data.slice(8, 12));
-                        var entry = [keyword, data_len, resp_code];
-                        result_table.push(entry);
-                    });
-                    wsocket.on('error', console.error);
-                }
-            };
-            while (wordlist.length !== 1 || wordlist === undefined) {
-                _loop_1();
-            }
-        });
+function fuzzer(url, wordlist, request, fuzzmarker) {
+    var wsocket = net_1.connect({ host: url.hostname, port: Number(url.port) }, function () { return send_next(); });
+    wsocket.on('data', function (chunk) {
+        console.log(chunk.toString());
     });
+    function send_next() {
+        if (wordlist.length === 0) {
+            wsocket.end();
+            return;
+        }
+        var currentKeyword = wordlist.shift();
+        if (!currentKeyword)
+            return;
+        var payload = inject(request, currentKeyword, fuzzmarker);
+        wsocket.write(payload);
+    }
 }
+
 var result_table = [];
 function main() {
     // Get file path from user
@@ -57,7 +50,7 @@ function main() {
     var url = new url_1.URL(args.url);
     var passwords = fs.readFileSync(args.wlist, 'utf-8');
     var wlist = passwords.split("\n").map(function (p) { return p.trim(); }).filter(function (p) { return p !== ""; });
-    worker(url, wlist, content, 'FUZZ');
+    fuzzer(url, wlist, content, 'FUZZ');
     console.log(result_table);
 }
 main();
