@@ -1,4 +1,4 @@
-GET /vulnerabilities/brute/?username=gordonb&password=abc123&Login=Login HTTP/1.1
+GET /vulnerabilities/brute/?username=gordonb&password=FUZZ&Login=Login HTTP/1.1
 Host: 127.0.0.1:8888
 sec-ch-ua: "Chromium";v="145", "Not:A-Brand";v="99"
 sec-ch-ua-mobile: ?0
