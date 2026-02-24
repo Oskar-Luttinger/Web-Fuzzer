@@ -9,3 +9,7 @@ export function parse_args(): Record<string, string>  {
     return args_record;
 }
 
+export function parse_content(header: string): string | null {
+    const match = header.match(/content-length:\s*(\d+)/i);
+    return match ? match[1] : null;
+}
