@@ -1,18 +1,20 @@
-GET /wiki/Olly_olly_oxen_free HTTP/2
-Host: en.wikipedia.org
-Cookie: WMF-Last-Access=24-Feb-2026; WMF-Last-Access-Global=24-Feb-2026; WMF-DP=71f; GeoIP=SE:C:Uppsala:59.86:17.64:v4; WMF-Uniq=cCDj6mEmHYfG54rJ7pMm0gMRAAEBAFvd63k4UN64BG3TIXRV31FkdYFJp7vpOhZU; NetworkProbeLimit=0.001; enwikimwuser-sessionId=5e69e85be230b4a8d461
-Cache-Control: max-age=0
-Sec-Ch-Ua: "Chromium";v="145", "Not:A-Brand";v="99"
-Sec-Ch-Ua-Mobile: ?0
-Sec-Ch-Ua-Platform: "Windows"
+POST /login HTTP/1.1
+Host: 127.0.0.1:4444
+Content-Length: 30
+sec-ch-ua-platform: "Windows"
 Accept-Language: sv-SE,sv;q=0.9
-Upgrade-Insecure-Requests: 1
+sec-ch-ua: "Chromium";v="145", "Not:A-Brand";v="99"
+Content-Type: application/json
+sec-ch-ua-mobile: ?0
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36
-Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
-Sec-Fetch-Site: cross-site
-Sec-Fetch-Mode: navigate
-Sec-Fetch-User: ?1
-Sec-Fetch-Dest: document
-Referer: https://www.google.com/
+Accept: */*
+Origin: http://127.0.0.1:4444
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: http://127.0.0.1:4444/
 Accept-Encoding: gzip, deflate, br
-Priority: u=0, i
+DNT: 1
+Connection: keep-alive
+
+{"user":"admin","pass":"FUZZ"}
