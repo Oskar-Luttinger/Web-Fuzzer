@@ -7,21 +7,9 @@ import * as readline from "readline/promises"
 import {stdin as input, stdout as output } from "process";
 import { send_raw } from "./hello_web";
 import { URL } from 'url'; 
+import { parse_args, parse_content } from "./parsers"
 
-
-
-// Parse cmdline arguments
-export function parse_args(): Record<string, string>  {
-    const args = process.argv.slice(2); // Returns an array [--arg=value, --arg1=value, ...]
-    let args_record: Record<string, string> = {}
-    args.forEach((arg) => {
-        let [key, value]: string[] = arg.replace('--', '').split('=');
-        args_record[key] = value; // Inserts argument key and its value into args record
-    })  
-    return args_record;
-}
-
-export function inject(request : string, keyword: string, fuzzmarker?: string): string {
+function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
         fuzzmarker = 'FUZZ'
     }
@@ -31,28 +19,51 @@ export function inject(request : string, keyword: string, fuzzmarker?: string): 
     return payload
 } 
 
+function snr(url: URL, payload: string) {
+    return new Promise((resolve, reject) => {
+        try {
+            let buffer = ''
+            const wsock = net.connect({host: url.hostname, port: Number(url.port)}, ()=>{})
+            wsock.on('connect', ()=> {
+                wsock.write(payload, 'utf-8')
+            })
+            wsock.on('data', function crec(chunk) {
+                buffer += chunk 
+                if (buffer.length > Number(parse_content(buffer)))
+                    wsock.off('data', crec)
+                    resolve(buffer)
+            })
+            wsock.on('error', (error) => {
+                wsock.end()
+                reject(error)
+            })
+        } catch (error) {
+            console.log(error)
+            reject(error)
+        }
+    })
+}
 
 
 let result_table: Array<Array<string|number>> = []
 
-function main() {
-    // Get file path from user
-    const args = parse_args()
+async function worker(content, wlist) {
+    return new Promise((resolve, reject) => {
+        while (true)
+        if (wlist.is_empty) {
+            resolve('Done!')
 
-    const content: string = fs.readFileSync(args.path, 'utf-8'); // Synchronous function, rest of program will wait until finished
-    const url = new URL(args.url)
-    const passwords: string = fs.readFileSync(args.wlist, 'utf-8'); 
-    let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== "");
-    console.log(result_table)
-
+        }
+    }
 }
 
-
-
-
-
-main();
-
+ // Get file path from user
+ const args = parse_args()
+ const content: string = fs.readFileSync(args.path, 'utf-8'); // Synchronous function, rest of program will wait until finished
+ const url = new URL(args.url)
+ const passwords: string = fs.readFileSync(args.wlist, 'utf-8'); 
+ let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== "");
+ 
 
 
 

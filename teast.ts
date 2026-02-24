@@ -1,5 +1,5 @@
 // Teast
-import { parse_args } from "./parsers";
+import { parse_args, parse_content } from "./parsers";
 import { URL } from 'url';
 import net from "net";
 import * as fs from 'fs';
@@ -45,10 +45,6 @@ async function TNR(url: URL, payload: string) {
 
 }
 
-function content_length(chunk: string) {
-    return 4417
-}
-
 function snr(url: URL, payload: string) {
     return new Promise((resolve, reject) => {
         try {
@@ -59,7 +55,7 @@ function snr(url: URL, payload: string) {
             })
             wsock.on('data', function crec(chunk) {
                 buffer += chunk 
-                if (buffer.length > content_length(buffer))
+                if (buffer.length > Number(parse_content(buffer)))
                     wsock.off('data', crec)
                     resolve(buffer)
             })
