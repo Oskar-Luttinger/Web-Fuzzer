@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parse_args = parse_args;
 exports.parse_content = parse_content;
+exports.parse_status = parse_status;
 function parse_args() {
     var args = process.argv.slice(2);
     var args_record = {};
@@ -14,4 +15,8 @@ function parse_args() {
 function parse_content(header) {
     var match = header.match(/content-length:\s*(\d+)/i);
     return match ? match[1] : null;
+}
+function parse_status(data) {
+    var match = data.match(/http\/1.1:\s*(\d+)/i);
+    return match ? Number(match[1]) : null;
 }
