@@ -83,9 +83,52 @@ function TNR(url, payload) {
                     recvieved = _a.sent();
                     console.log(recvieved);
                     console.log(head_buff);
+                    console.log(head_buff.length);
                     return [2 /*return*/];
             }
         });
     });
 }
-TNR(url, content);
+function content_length(chunk) {
+    return 4417;
+}
+function snr(url, payload) {
+    return new Promise(function (resolve, reject) {
+        try {
+            var buffer_1 = '';
+            var wsock_1 = net_1.connect({ host: url.hostname, port: Number(url.port) }, function () { });
+            wsock_1.on('connect', function () {
+                wsock_1.write(payload, 'utf-8');
+            });
+            wsock_1.on('data', function crec(chunk) {
+                buffer_1 += chunk;
+                if (buffer_1.length > content_length(buffer_1))
+                    wsock_1.off('data', crec);
+                resolve(buffer_1);
+            });
+            wsock_1.on('error', function (error) {
+                wsock_1.end();
+                reject(error);
+            });
+        }
+        catch (error) {
+            console.log(error);
+            reject(error);
+        }
+    });
+}
+function lolbin(url, payload) {
+    return __awaiter(this, void 0, void 0, function () {
+        var response;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, snr(url, payload)];
+                case 1:
+                    response = _a.sent();
+                    console.log(response);
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+lolbin(url, content);
