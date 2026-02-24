@@ -15,6 +15,11 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
     return payload
 } 
 
+function mod_cl(payload: string) {
+    const [headers, body] = payload.split('')
+    
+}
+
 function snr(url: URL, payload: string): Promise<string> {
     return new Promise((resolve, reject) => {
         try {
@@ -25,7 +30,7 @@ function snr(url: URL, payload: string): Promise<string> {
             })
             wsock.on('data', function crec(chunk) {
                 buffer += chunk 
-                if (buffer.length > Number(parse_content(buffer))) {
+                if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer))) {
                     wsock.off('data', crec)
                     resolve(buffer)
                 }

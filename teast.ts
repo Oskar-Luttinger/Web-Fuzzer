@@ -55,7 +55,7 @@ function snr(url: URL, payload: string) {
             })
             wsock.on('data', function crec(chunk) {
                 buffer += chunk 
-                if (buffer.length > Number(parse_content(buffer)))
+                if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer)))
                     wsock.off('data', crec)
                     resolve(buffer)
             })
