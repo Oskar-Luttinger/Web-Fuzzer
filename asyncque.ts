@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { parse_args } from "./argparse";
+import { parse_args } from "./parsers";
 
 const args = parse_args()
 const passwords: string = fs.readFileSync(args.worst_password, 'utf-8'); 

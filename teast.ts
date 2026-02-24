@@ -1,5 +1,5 @@
 // Teast
-import { parse_args } from "./argparse";
+import { parse_args } from "./parsers";
 import { URL } from 'url';
 import net from "net";
 import * as fs from 'fs';

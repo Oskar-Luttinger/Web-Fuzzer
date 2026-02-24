@@ -13,4 +13,3 @@ export function parse_content(header: string): string | null {
     const match = header.match(/content-length:\s*(\d+)/i);
     return match ? match[1] : null;
 }
-
