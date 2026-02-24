@@ -14,25 +14,32 @@ async function TNR(url: URL, payload: string) {
     let body_buff = ''
 
     wsock.on('connect', () => {
+        console.log('Connected! Sending payload...')
         wsock.write(payload, 'utf-8')
     })
 
     function recv() {
         return new Promise((resolve, reject) => {
             try {
-                wsock.on('data', (chunk) => {
+                wsock.on('data', function crec(chunk) {
                     head_buff += chunk
-                })
-                if (head_buff.length > 100) {
+                    if (head_buff.length > 10) {
+                    wsock.off('data', crec)
                     resolve('recieved!')
             } 
+                })
             } catch (error) {
                   console.log(error)
                   reject(error)
             } 
         })
     }
-    await recv()
+    wsock.on('error', (error) => {
+        console.log(error)
+        wsock.end()
+    })
+    let recvieved = await recv()
+    console.log(recvieved)
     console.log(head_buff)
 
 }
