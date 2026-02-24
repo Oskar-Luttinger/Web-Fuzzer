@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const app = (0, express_1.default)();
-const PORT = 3000;
+const PORT = 4444;
 //Allows the server to understand the json files
 app.use(express_1.default.json());
 //Gives express access to all of the website files
