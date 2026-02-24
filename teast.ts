@@ -1,5 +1,5 @@
 // Teast
-import { parse_args } from "./argparse";
+import { parse_args } from "./parsers";
 import { URL } from 'url';
 import net from "net";
 import * as fs from 'fs';
@@ -41,7 +41,42 @@ async function TNR(url: URL, payload: string) {
     let recvieved = await recv()
     console.log(recvieved)
     console.log(head_buff)
+    console.log(head_buff.length)
 
 }
 
-TNR(url, content)
+function content_length(chunk: string) {
+    return 4417
+}
+
+function snr(url: URL, payload: string) {
+    return new Promise((resolve, reject) => {
+        try {
+            let buffer = ''
+            const wsock = net.connect({host: url.hostname, port: Number(url.port)}, ()=>{})
+            wsock.on('connect', ()=> {
+                wsock.write(payload, 'utf-8')
+            })
+            wsock.on('data', function crec(chunk) {
+                buffer += chunk 
+                if (buffer.length > content_length(buffer))
+                    wsock.off('data', crec)
+                    resolve(buffer)
+            })
+            wsock.on('error', (error) => {
+                wsock.end()
+                reject(error)
+            })
+        } catch (error) {
+            console.log(error)
+            reject(error)
+        }
+    })
+}
+
+async function lolbin(url: URL, payload: string) {
+    let response = await snr(url, payload)
+    console.log(response)
+}
+
+lolbin(url, content)
