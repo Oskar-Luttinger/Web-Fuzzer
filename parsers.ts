@@ -15,6 +15,20 @@ export function parse_content(header: string): string | null {
 }
 
 export function parse_status(data: string): number | null {
-    const match = data.match(/http\/1.1:\s*(\d+)/i);
-    return match ? Number(match[0]) : null;
+    const match = data.match(/HTTP\/\d\.\d\s+(\d+)/i);
+    return match ? Number(match[1]) : null;
 }
+
+const chunk = `HTTP/1.1 4044 Unauthorized
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 59
+ETag: W/"3b-Qjmp5F/nEZbGoS3IF1NZY+C5op0"
+Date: Tue, 24 Feb 2026 16:04:19 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"success":false,"message":"Invalid username or password."}`
+
+
+console.log(parse_status(chunk))
