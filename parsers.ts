@@ -19,8 +19,9 @@ export function parse_status(data: string): number | null {
     return match ? Number(match[1]) : null;
 }
 
-function change_cl(payload: string): string {
-  const [payload_headers, payload_body] = payload.split('\n\n')
+export function change_cl(payload: string): string {
+  const [payload_headers, payload_body] = payload.split('r\n\r\n')
+  console.log(payload_headers)
   const new_cl = Buffer.byteLength(payload_body)
   return payload.replace(/content-length:\s*(\d+)/i, `Content-length: ${String(new_cl)}`)
 }

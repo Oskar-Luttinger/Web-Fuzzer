@@ -3,7 +3,7 @@
 import net from "net";
 import * as fs from 'fs';
 import { URL } from 'url'; 
-import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
+import { parse_args, parse_content, parse_status } from "./parsers"
 
 function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
@@ -14,6 +14,14 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
     const payload = prefix + keyword + suffix
     return payload
 } 
+
+function change_cl(payload: string): string {
+  const [payload_headers, payload_body] = payload.split('\n\n')
+  console.log(payload_headers)
+  const new_cl = Buffer.byteLength(payload_body)
+  return payload.replace(/content-length:\s*(\d+)/i, `Content-length: ${String(new_cl)}`)
+}
+
 
 function snr(url: URL, payload: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -46,12 +54,14 @@ async function worker(content: string, wlist: Array<string>, url: URL) {
     try {    
         let result_table = []
         while (wlist !== undefined && wlist.length > 0) {
+            let i = 0
             let current_keyword = wlist.shift()
             console.log(current_keyword)
-            if (current_keyword) {
+            if (current_keyword !== undefined) {
                 let payload = change_cl(inject(content, current_keyword))
                 let result = await snr(url, payload)
-                console.log(result)
+                console.log(i)
+                i = i + 1
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
                 result_table.push([current_keyword, content_length, status_code])
