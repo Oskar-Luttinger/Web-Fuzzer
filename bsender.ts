@@ -3,7 +3,7 @@
 import net from "net";
 import * as fs from 'fs';
 import { URL } from 'url'; 
-import { parse_args, parse_content, parse_status } from "./parsers"
+import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
 
 function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
@@ -14,13 +14,6 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
     const payload = prefix + keyword + suffix
     return payload
 } 
-
-function change_cl(payload: string): string {
-  const [payload_headers, payload_body] = payload.split('\n\n')
-  console.log(payload_headers)
-  const new_cl = Buffer.byteLength(payload_body)
-  return payload.replace(/content-length:\s*(\d+)/i, `Content-length: ${String(new_cl)}`)
-}
 
 
 function snr(url: URL, payload: string): Promise<string> {

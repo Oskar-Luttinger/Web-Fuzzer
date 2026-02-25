@@ -20,7 +20,7 @@ export function parse_status(data: string): number | null {
 }
 
 export function change_cl(payload: string): string {
-  const [payload_headers, payload_body] = payload.split('r\n\r\n')
+  const [payload_headers, payload_body] = payload.split('\r\n\r\n')
   console.log(payload_headers)
   const new_cl = Buffer.byteLength(payload_body)
   return payload.replace(/content-length:\s*(\d+)/i, `Content-length: ${String(new_cl)}`)
