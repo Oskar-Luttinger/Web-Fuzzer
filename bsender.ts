@@ -42,19 +42,24 @@ function snr(url: URL, payload: string): Promise<string> {
     })
 }
 
+function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<string>> {
+    let password_chunks = []
+    const len = chunk.length/num_workers
+    for(let i = 0; num_workers > i; i = i+1){
+        password_chunks.push(chunk.splice(0, len))
+    }
+    return password_chunks
+}
 
 async function worker(content: string, wlist: Array<string>, url: URL) {
     try {    
         let result_table = []
         while (wlist !== undefined && wlist.length > 0) {
-            let i = 0
             let current_keyword = wlist.shift()
             console.log(current_keyword)
             if (current_keyword !== undefined) {
                 let payload = change_cl(inject(content, current_keyword))
                 let result = await snr(url, payload)
-                console.log(i)
-                i = i + 1
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
                 result_table.push([current_keyword, content_length, status_code])
@@ -73,6 +78,8 @@ const content: string = fs.readFileSync(args.path, 'utf-8'); // Synchronous func
 const url = new URL(args.url)
 const passwords: string = fs.readFileSync(args.wlist, 'utf-8'); 
 let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== "");
+
+
 
 async function print_result() {
     let result = await Promise.allSettled([worker(content, wlist, url)])
