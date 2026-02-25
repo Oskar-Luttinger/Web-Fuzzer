@@ -3,7 +3,7 @@
 import net from "net";
 import * as fs from 'fs';
 import { URL } from 'url'; 
-import { parse_args, parse_content, parse_status } from "./parsers"
+import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
 
 function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
@@ -14,11 +14,6 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
     const payload = prefix + keyword + suffix
     return payload
 } 
-
-function mod_cl(payload: string) {
-    const [headers, body] = payload.split('')
-    
-}
 
 function snr(url: URL, payload: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -54,7 +49,7 @@ async function worker(content: string, wlist: Array<string>, url: URL) {
             let current_keyword = wlist.shift()
             console.log(current_keyword)
             if (current_keyword) {
-                let payload = inject(content, current_keyword)
+                let payload = change_cl(inject(content, current_keyword))
                 let result = await snr(url, payload)
                 console.log(result)
                 let content_length = Number(parse_content(result))
