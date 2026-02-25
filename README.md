@@ -15,4 +15,5 @@ session - used in the autorization of a user so that you can't bypass the login 
 ### 2. Find a way to save results from the workers into a csv file
 ### 3. Implement "stealth mode" with a aleep timer in the fuzz loop to decrease intensity
 ### 4. Implement other attack modes
+### 5. Add requirements file
 ### ? make it linux compatible
