@@ -16,8 +16,8 @@ app.use(session({
     cookie: { secure: false }
 }));
 
-
 app.use(express.json());
+app.use('/images', express.static(path.join(__dirname, '../images')));
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/scripts', express.static(path.join(__dirname, '.')));
 
