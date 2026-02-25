@@ -1,7 +1,7 @@
 const loginBtn = document.getElementById('loginBtn');
 
 loginBtn?.addEventListener('click', async () => {
-    //Gets the input from the HTML file
+    //
     const user = (document.getElementById('username') as HTMLInputElement).value;
     const pass = (document.getElementById('password') as HTMLInputElement).value;
     const messageElement = document.getElementById('message');

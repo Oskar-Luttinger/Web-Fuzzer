@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 const loginBtn = document.getElementById('loginBtn');
 loginBtn === null || loginBtn === void 0 ? void 0 : loginBtn.addEventListener('click', () => __awaiter(this, void 0, void 0, function* () {
-    //Gets the input from the HTML file
+    //
     const user = document.getElementById('username').value;
     const pass = document.getElementById('password').value;
     const messageElement = document.getElementById('message');
