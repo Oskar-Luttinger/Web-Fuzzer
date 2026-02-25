@@ -29,7 +29,7 @@ loginBtn === null || loginBtn === void 0 ? void 0 : loginBtn.addEventListener('c
         }
         if (data.success) {
             setTimeout(() => {
-                window.location.href = "public/website.html";
+                window.location.href = "../dashboard";
             }, 1000);
         }
     }

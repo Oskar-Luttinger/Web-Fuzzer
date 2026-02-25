@@ -25,7 +25,7 @@ loginBtn?.addEventListener('click', async () => {
 
         if (data.success) {
          setTimeout(() => {
-            window.location.href = "public/website.html";
+            window.location.href = "../dashboard";
          }, 1000);
         }
 
