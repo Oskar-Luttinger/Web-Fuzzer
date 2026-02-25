@@ -17,6 +17,6 @@ function parse_content(header) {
     return match ? match[1] : null;
 }
 function parse_status(data) {
-    var match = data.match(/http\/1.1:\s*(\d+)/i);
+    var match = data.match(/HTTP\/\d\.\d\s+(\d+)/i);
     return match ? Number(match[1]) : null;
 }
