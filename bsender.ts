@@ -4,6 +4,7 @@ import net from "net";
 import * as fs from 'fs';
 import { URL } from 'url'; 
 import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
+import { format } from "@fast-csv/format";
 
 function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
@@ -81,15 +82,27 @@ const passwords: string = fs.readFileSync(args.wlist, 'utf-8');
 let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== "");
 
 const number_of_workers = 20
-
 const worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => worker(content, chunk, url));
 console.log(worker_promises)
+const file_path = 'output.csv'
 
-
-async function print_result() {
+async function handle_result() {
     let result = await Promise.allSettled(worker_promises)
-    console.log(result)
+    for (const r of result) {
+        if (r.status === 'fulfilled') {
+            const csv_data = r.value!.map(row => row.join(',')).join('\n');
+            fs.writeFile(file_path, csv_data, 'utf8', (err) => {
+            if (err) {
+              console.error('Error writing to CSV file', err);
+            } else {
+              console.log(`CSV file has been saved to ${file_path}`);
+            }
+            });
+        } else {
+            console.log('Worker failed')
+        }
+    }
 }
 
-print_result()
+handle_result()
 
