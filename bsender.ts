@@ -85,18 +85,26 @@ const number_of_workers = 20
 const worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => worker(content, chunk, url));
 console.log(worker_promises)
 const file_path = 'output.csv'
+const csvhead = 'KEYWORD, RESPONSE LENGTH, RESPONSE CODE'
+fs.writeFile(file_path, csvhead, 'utf8', (err) => {
+  if (err) {
+    console.error('Error writing to CSV file', err);
+  } else {
+    console.log(`Headers saved!`);
+  }
+});
 
 async function handle_result() {
     let result = await Promise.allSettled(worker_promises)
     for (const r of result) {
         if (r.status === 'fulfilled') {
-            const csv_data = r.value!.map(row => row.join(',')).join('\n');
-            fs.writeFile(file_path, csv_data, 'utf8', (err) => {
-            if (err) {
-              console.error('Error writing to CSV file', err);
-            } else {
-              console.log(`CSV file has been saved to ${file_path}`);
-            }
+            const worker_data = r.value!.map(row => row.join(',')).join('\n');
+            fs.appendFile(file_path, '\n' + worker_data, 'utf8', (err) => {
+              if (err) {
+                console.error('Error appending to CSV file', err);
+              } else {
+                console.log(`Data appended.`);
+              }
             });
         } else {
             console.log('Worker failed')
