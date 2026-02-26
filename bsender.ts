@@ -4,7 +4,52 @@ import net from "net";
 import * as fs from 'fs';
 import { URL } from 'url'; 
 import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
-import { format } from "@fast-csv/format";
+
+
+const helpmsg = `
+It looks like you need some help. (*) marks required arguments
+
+Usage: 
+
+bsender [-u=<url> | --url=<url>]* [-m=<sniper, ram, spyder> | --mode=<sniper, ram, spyder>]* 
+[-p=<path to payload> | --payload<path to payload>]* [-ul=<path to username wordlist> | --userlist=<path to username wordlist>] 
+[-pl=<path to password wordlist> | --passlist<path to password wordlist>] [-wl=<path wordlist> | --wordlist=<path wordlist>]
+[-w=<number of workers> | --workers=<number of workers>]
+[-o=<path to output> | --output=<path to output>] [-s=<ms> | --sleep=<ms>]
+[-h  | --help] [-q | --quiet] [-v | --verbose]
+[-vv | --very_verbose] [-j | --jitter]
+
+Description of arguments and values:
+
+--url = url AND port to send payload to. Ex: http://test.com:80
+
+--userlist = APPLIES TO RAM MODE: path to list of usernames to use in the attack. Ex: C:\\Users\\Attacker\\user-list.txt. 
+
+--passlist = APPLIES TO RAM MODE | SNIPER MODE: path to list of passwords to use in the attack
+
+--wordlist = APPLIES TO SNIPER MODE: path to list of words to inject into the payload
+
+--workers = number of concurrent workers to run. Recommended: 20
+
+--output = path to write the output csv file to.
+
+--sleep = sets a delay between each request in every worker. Note: All workers will still send their request at 
+          the same time so it is not stealthy to have a long sleep but a high amount of workers.
+
+--mode = sets attack mode:
+            <sniper> = Fuzzes one parameter
+            <ram> = fuzzes two parameters. For every word in the userlist it will try every word in the pass list 
+            <spyder> = crawl the target domain recursively
+
+            <help> = displays this message
+
+--quiet = sets the fuzzer to send only one request / second to reduce noise.
+
+--jitter = REQUIRES THE SLEEP ARGUMENT: adds random intervals between sleep and sleep * 4 for each request to disrupt patterns. 
+
+--verbose | --very_verbose = increases the verbosity of the program i.e how much info it prints.
+`
+
 
 function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
@@ -74,14 +119,20 @@ async function worker(content: string, wlist: Array<string>, url: URL) {
 }
 
 
-// Get file path from user
+// Parse args and assign options to constants / variables
 const args = parse_args()
-const content: string = fs.readFileSync(args.path, 'utf-8'); // Synchronous function, rest of program will wait until finished
-const url = new URL(args.url)
-const passwords: string = fs.readFileSync(args.wlist, 'utf-8'); 
-let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== "");
+if (args.help || args.h) {
+    console.log(helpmsg)
+    process.exit(0)
+}
 
-const number_of_workers = 20
+const content: string = fs.readFileSync(String(args.path), 'utf-8'); // Synchronous function, rest of program will wait until finished
+const url = new URL(String(args.url))
+const passwords: string = fs.readFileSync(String(args.wlist), 'utf-8'); 
+let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
+const number_of_workers = args.workers ? Number(args.workers) : 10
+
+
 const worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => worker(content, chunk, url));
 console.log(worker_promises)
 const file_path = 'output.csv'
