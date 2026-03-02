@@ -133,7 +133,7 @@ function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<stri
     let password_chunks = []
     const len = chunk.length/num_workers
     for(let i = 0; num_workers > i; i = i+1){
-        password_chunks.push(chunk.splice(0, len))
+        password_chunks.push(chunk.splice(0, len))SS
     }
     return password_chunks
 }
@@ -144,13 +144,11 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
         let result_table = []
         while (wlist !== undefined && wlist.length > 0) {
             let current_keyword = wlist.shift()
-            if (current_keyword !== undefined) {
-                let payload = change_cl(inject(content, current_keyword))
-                let result = await snr(url, payload, use_crypt)
-                let content_length = Number(parse_content(result))
-                let status_code = parse_status(result)
-                result_table.push([current_keyword, content_length, status_code])
-                }
+            let payload = change_cl(inject(content, current_keyword!))
+            let result = await snr(url, payload, use_crypt)
+            let content_length = Number(parse_content(result))
+            let status_code = parse_status(result)
+            result_table.push([current_keyword, content_length, status_code])
             }
         return result_table
         }  catch (error) {
@@ -164,17 +162,16 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
         let result_table = []
         while (userlist !== undefined && userlist.length > 0) {
             let current_username = userlist.shift()
-            let payload = change_cl(inject(content))
-            while(passlist !== undefined && passlist.length >0)
-            let current_keyword = wlist.shift()
-            if (current_keyword !== undefined) {
-                let payload = change_cl(inject(content, current_keyword))
+            let payload = inject(content, current_username!, 'USER')
+            while(passlist !== undefined && passlist.length >0) {
+                let current_password = passlist.shift()
+                payload = change_cl(inject(content, current_password!, 'PASS'))
                 let result = await snr(url, payload, use_crypt)
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
-                result_table.push([current_keyword, content_length, status_code])
+                result_table.push([current_username, current_password, content_length, status_code])
                 }
-            }
+            }  
         return result_table
         }  catch (error) {
            console.log(error)
