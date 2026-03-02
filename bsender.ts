@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import { URL } from 'url'; 
 import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
 import tls from "tls"
+import { worker } from "cluster";
 
 const helpmsg = `
 It looks like you need some help. (*) marks required arguments
@@ -15,8 +16,8 @@ bsender [-u=<url> | --url=<url>]* [-m=<sniper, ram, spyder> | --mode=<sniper, ra
 [-p=<path to payload> | --payload<path to payload>]* [-ul=<path to username wordlist> | --userlist=<path to username wordlist>] 
 [-pl=<path to password wordlist> | --passlist<path to password wordlist>] [-wl=<path wordlist> | --wordlist=<path wordlist>]
 [-w=<number of workers> | --workers=<number of workers>]
-[-o=<path to output> | --output=<path to output>] [-s=<ms> | --sleep=<ms>]
-[-h  | --help] [-q | --quiet] [-v | --verbose]
+[-o=<path to output> | --output=<path to output>] [-d=<ms> | --delay=<ms>]
+[-h  | --help] [-s | --stealth] [-v | --verbose]
 [-vv | --very_verbose] [-j | --jitter]
 
 Description of arguments and values:
@@ -33,7 +34,7 @@ Description of arguments and values:
 
 --output = path to write the output csv file to.
 
---sleep = sets a delay between each request in every worker. Note: All workers will still send their request at 
+--delay = sets a delay between each request in every worker. Note: All workers will still send their request at 
           the same time so it is not stealthy to have a long sleep but a high amount of workers.
 
 --mode = sets attack mode:
@@ -43,7 +44,7 @@ Description of arguments and values:
 
             <help> = displays this message
 
---quiet = sets the fuzzer to send only one request / second to reduce noise.
+--stealth = sets the fuzzer to send only one request / second to reduce noise.
 
 --jitter = REQUIRES THE SLEEP ARGUMENT: adds random intervals between sleep and sleep * 4 for each request to disrupt patterns. 
 
@@ -128,7 +129,7 @@ function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<stri
     return password_chunks
 }
 
-async function worker(content: string, wlist: Array<string>, url: URL, tls: boolean) {
+async function sniper_worker(content: string, wlist: Array<string>, url: URL, tls: boolean) {
     try {    
         let result_table = []
         while (wlist !== undefined && wlist.length > 0) {
@@ -148,8 +149,39 @@ async function worker(content: string, wlist: Array<string>, url: URL, tls: bool
 }
 
 
-async function save_result() {
+async function sniper() {
+    // Create worker array
+
+    let worker_promises
+
+    if (url.protocol === 'https:') {
+        worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, true));
+    } else {
+        worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, false));
+    }
+
     let result = await Promise.allSettled(worker_promises)
+    return 
+}
+
+// Save to csv
+function save_to_csv(result: PromiseSettledResult<(string | number | null)[][] | undefined>[]) {
+    let file_path
+    if (args.o || args.output) {
+        file_path = args.o ? args.o : args.output
+    } else {
+        file_path = 'output.csv'
+    }
+
+    const csvhead = 'KEYWORD, RESPONSE LENGTH, RESPONSE CODE'
+    fs.writeFile(file_path, csvhead, 'utf8', (err) => {
+      if (err) {
+        console.error('Error writing to CSV file', err);
+      } else {
+        console.log(`Headers saved!`);
+      }
+    });
+
     for (const r of result) {
         if (r.status === 'fulfilled') {
             const worker_data = r.value!.map(row => row.join(',')).join('\n');
@@ -166,39 +198,26 @@ async function save_result() {
     }
 }
 
+
 // Parse args and assign options to constants / variables
 const args = parse_args()
 if (args.help || args.h) {
     console.log(helpmsg)
     process.exit(0)
 }
+
 const content: string = fs.readFileSync(String(args.path), 'utf-8'); // Synchronous function, rest of program will wait until finished
 const url = new URL(String(args.url))
 const passwords: string = fs.readFileSync(String(args.wlist), 'utf-8'); 
 let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
 const number_of_workers = args.workers || args.w ? Number(args.workers) : 10
 
+// Sniper mode
 
-// Create worker array
-if (url.protocol === 'https:') {
-    const worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => worker(content, chunk, url, true));
-} else {
-    const worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => worker(content, chunk, url, false));
+if (args.m === 'sniper' || args.mode === 'sniper') {
+    sniper()
 }
 
+if args.m === 
 
-
-// Save csv headers
-const file_path = 'output.csv'
-const csvhead = 'KEYWORD, RESPONSE LENGTH, RESPONSE CODE'
-fs.writeFile(file_path, csvhead, 'utf8', (err) => {
-  if (err) {
-    console.error('Error writing to CSV file', err);
-  } else {
-    console.log(`Headers saved!`);
-  }
-});
-
-
-save_result()
 
