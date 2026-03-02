@@ -4,7 +4,7 @@ import net from "net";
 import * as fs from 'fs';
 import { URL } from 'url'; 
 import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
-
+import tls from "tls"
 
 const helpmsg = `
 It looks like you need some help. (*) marks required arguments
@@ -62,6 +62,34 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
 } 
 
 
+function tls_snr(url: URL, payload: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        try {
+            let buffer = ''
+            const wsock = tls.connect({host: url.hostname, port: Number(url.port), rejectUnauthorized: false}, ()=>{})
+            wsock.on('secureConnect', ()=> {
+                wsock.write(payload, 'utf-8')
+            })
+            wsock.on('data', function crec(chunk) {
+                buffer += chunk 
+                if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer))) {
+                    wsock.off('data', crec)
+                    wsock.end()
+                    resolve(buffer)
+                }
+            })
+            wsock.on('error', (error) => {
+                wsock.end()
+                reject(error)
+            })
+        } catch (error) {
+            console.log(error)
+            reject(error)
+        }
+    })
+}
+
+
 function snr(url: URL, payload: string): Promise<string> {
     return new Promise((resolve, reject) => {
         try {
@@ -74,6 +102,7 @@ function snr(url: URL, payload: string): Promise<string> {
                 buffer += chunk 
                 if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer))) {
                     wsock.off('data', crec)
+                    wsock.end()
                     resolve(buffer)
                 }
             })
@@ -99,7 +128,7 @@ function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<stri
     return password_chunks
 }
 
-async function worker(content: string, wlist: Array<string>, url: URL) {
+async function worker(content: string, wlist: Array<string>, url: URL, tls: boolean) {
     try {    
         let result_table = []
         while (wlist !== undefined && wlist.length > 0) {
@@ -119,33 +148,7 @@ async function worker(content: string, wlist: Array<string>, url: URL) {
 }
 
 
-// Parse args and assign options to constants / variables
-const args = parse_args()
-if (args.help || args.h) {
-    console.log(helpmsg)
-    process.exit(0)
-}
-
-const content: string = fs.readFileSync(String(args.path), 'utf-8'); // Synchronous function, rest of program will wait until finished
-const url = new URL(String(args.url))
-const passwords: string = fs.readFileSync(String(args.wlist), 'utf-8'); 
-let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
-const number_of_workers = args.workers ? Number(args.workers) : 10
-
-
-const worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => worker(content, chunk, url));
-console.log(worker_promises)
-const file_path = 'output.csv'
-const csvhead = 'KEYWORD, RESPONSE LENGTH, RESPONSE CODE'
-fs.writeFile(file_path, csvhead, 'utf8', (err) => {
-  if (err) {
-    console.error('Error writing to CSV file', err);
-  } else {
-    console.log(`Headers saved!`);
-  }
-});
-
-async function handle_result() {
+async function save_result() {
     let result = await Promise.allSettled(worker_promises)
     for (const r of result) {
         if (r.status === 'fulfilled') {
@@ -163,5 +166,39 @@ async function handle_result() {
     }
 }
 
-handle_result()
+// Parse args and assign options to constants / variables
+const args = parse_args()
+if (args.help || args.h) {
+    console.log(helpmsg)
+    process.exit(0)
+}
+const content: string = fs.readFileSync(String(args.path), 'utf-8'); // Synchronous function, rest of program will wait until finished
+const url = new URL(String(args.url))
+const passwords: string = fs.readFileSync(String(args.wlist), 'utf-8'); 
+let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
+const number_of_workers = args.workers || args.w ? Number(args.workers) : 10
+
+
+// Create worker array
+if (url.protocol === 'https:') {
+    const worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => worker(content, chunk, url, true));
+} else {
+    const worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => worker(content, chunk, url, false));
+}
+
+
+
+// Save csv headers
+const file_path = 'output.csv'
+const csvhead = 'KEYWORD, RESPONSE LENGTH, RESPONSE CODE'
+fs.writeFile(file_path, csvhead, 'utf8', (err) => {
+  if (err) {
+    console.error('Error writing to CSV file', err);
+  } else {
+    console.log(`Headers saved!`);
+  }
+});
+
+
+save_result()
 
