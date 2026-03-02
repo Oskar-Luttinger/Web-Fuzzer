@@ -6,17 +6,30 @@
 </head>
 <body>
     <h1 id="displayName">...</h1>
-
+    <p id="userDescription">...P</p>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('id');
 
         const display = document.getElementById('displayName');
+        const info = document.getElementById('userDescription');
 
         if (userId) {
             display.innerText = userId;
         } else {
             display.innerText = "No user selected";
+        }
+
+        if (userId === "bing-bong") {
+            info.innerText = "This is the account page for Bing Bong the most evil of evil at evil corp. He also has a strong hatred for kittens";
+        }
+
+        if (userId === "king-kong") {
+            info.innerText = "This is the account page for King Kong, he likes potatoes and usually eats them while watching his favorite show gilmore girls. He also has a strong hatred for kittens";
+        }
+
+        if (userId === "ding-dong") {
+            info.innerText = "This is the account page for King Kong, he likes does not like potatoes. He also has a strong hatred for kittens";
         }
     </script>
 </body>
