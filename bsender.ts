@@ -1,4 +1,4 @@
-// Bendy sender
+// Baby sender
 
 import net from "net";
 import * as fs from 'fs';
@@ -162,7 +162,10 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
 async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
     try {    
         let result_table = []
-        while (wlist !== undefined && wlist.length > 0) {
+        while (userlist !== undefined && userlist.length > 0) {
+            let current_username = userlist.shift()
+            let payload = change_cl(inject(content))
+            while(passlist !== undefined && passlist.length >0)
             let current_keyword = wlist.shift()
             if (current_keyword !== undefined) {
                 let payload = change_cl(inject(content, current_keyword))
@@ -200,7 +203,9 @@ async function ram() {
     let worker_promises
     const passlist: string = fs.readFileSync(String(args.p ? args.p : args.pass), 'utf-8')
     let passwords = passlist.split("\n").map(p => p.trim()).filter(p => p !== "");
+
     const userlist = fs.readFileSync(String(args.p ? args.p : args.pass), 'utf-8')
+    let usernames = userlist.split("\n").map(p => p.trim()).filter(p => p !== "");
 
     if (url.protocol === 'https:') {
     worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => ram_worker(content, chunk, url, true));
