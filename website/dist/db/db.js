@@ -38,7 +38,15 @@ const pool = promise_1.default.createPool({
         `);
         yield connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('BingBong', '12345')
+            VALUES ('dingdong', '12345')
+        `);
+        yield connection.query(`
+            INSERT IGNORE INTO users (username, password) 
+            VALUES ('bingbong', '123')
+        `);
+        yield connection.query(`
+            INSERT IGNORE INTO users (username, password) 
+            VALUES ('kingkong', '1234567')
         `);
     }
     catch (err) {

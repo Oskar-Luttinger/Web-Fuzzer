@@ -1,4 +1,12 @@
 const loginBtn = document.getElementById('loginBtn');
+const staffBtn = document.querySelectorAll('.staff-btn');
+
+staffBtn.forEach(staffBtn => {
+    staffBtn.addEventListener('click', () => {
+        const userId = staffBtn.getAttribute('data-user');
+        window.location.href = `user.html?id=${userId}`;
+    });
+});
 
 loginBtn?.addEventListener('click', async () => {
     //

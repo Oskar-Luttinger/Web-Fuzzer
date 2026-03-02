@@ -52,6 +52,9 @@ const requireAuth = (req, res, next) => {
 app.get("/dashboard", requireAuth, (req, res) => {
     res.sendFile(path_1.default.join(__dirname, "../private/website.html"));
 });
+app.get("/user.html", requireAuth, (req, res) => {
+    res.sendFile(path_1.default.join(__dirname, "../private/user.html"));
+});
 /* Login/Authentication controller
 * To lazy to comment rn
 */
@@ -59,7 +62,7 @@ app.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     const { user, pass } = req.body;
     console.log(`Login attempt for user: ${user}`);
     try {
-        const [rows] = yield db_1.default.execute('SELECT * FROM users WHERE username = ? AND password = ?', [user, pass]);
+        const [rows] = yield db_1.default.execute(`SELECT * FROM users WHERE username = '${user}' AND password = '${pass}'`, [user, pass]);
         if (rows.length > 0) {
             const dbUser = rows[0];
             req.session.isLoggedIn = true;

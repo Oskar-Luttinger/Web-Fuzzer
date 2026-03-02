@@ -67,6 +67,16 @@ button {
     cursor: pointer;
  
 }
+
+.staff-btn {
+    display: flex;
+    width: 20%;
+    margin-bottom: 50px;
+    height: 60px;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+}
 #message {
     text-align: center;
     font-weight: bold;

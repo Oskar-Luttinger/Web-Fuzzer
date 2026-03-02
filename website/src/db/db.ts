@@ -26,10 +26,22 @@ const pool = mysql.createPool ({
             INSERT IGNORE INTO users (username, password) 
             VALUES ('admin', '1234')
         `);
+
         await connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('BingBong', '12345')
+            VALUES ('dingdong', '12345')
         `);
+
+        await connection.query(`
+            INSERT IGNORE INTO users (username, password) 
+            VALUES ('bingbong', '123')
+        `);
+
+        await connection.query(`
+            INSERT IGNORE INTO users (username, password) 
+            VALUES ('kingkong', '1234567')
+        `);
+
     } catch (err) {
         console.log("Connection to database failed");
         console.error(err);

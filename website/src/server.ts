@@ -43,6 +43,10 @@ app.get("/dashboard", requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, "../private/website.html"));
 });
 
+app.get("/user.html", requireAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, "../private/user.html"));
+});
+
 /* Login/Authentication controller
 * To lazy to comment rn
 */ 
@@ -72,6 +76,7 @@ app.post('/login', async (req, res) => {
     } else {
         res.status(401).json({ success: false, message: 'Invalid username or password.' });
     } 
+
     } catch (error){
         console.error("Database error: error");
         res.status(500).json({success: false, message: "Internal server error"});

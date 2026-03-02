@@ -8,6 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 const loginBtn = document.getElementById('loginBtn');
+const staffBtn = document.querySelectorAll('.staff-btn');
+staffBtn.forEach(staffBtn => {
+    staffBtn.addEventListener('click', () => {
+        const userId = staffBtn.getAttribute('data-user');
+        window.location.href = `user.html?id=${userId}`;
+    });
+});
 loginBtn === null || loginBtn === void 0 ? void 0 : loginBtn.addEventListener('click', () => __awaiter(this, void 0, void 0, function* () {
     //
     const user = document.getElementById('username').value;

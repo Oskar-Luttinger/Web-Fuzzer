@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Staff Member</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1 id="displayName">...</h1>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('id');
+
+        const display = document.getElementById('displayName');
+
+        if (userId) {
+            display.innerText = userId;
+        } else {
+            display.innerText = "No user selected";
+        }
+    </script>
+</body>
+</html>
