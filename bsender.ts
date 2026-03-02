@@ -138,7 +138,28 @@ function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<stri
     return password_chunks
 }
 
+
 async function sniper_worker(content: string, wlist: Array<string>, url: URL, use_crypt: boolean) {
+    try {    
+        let result_table = []
+        while (wlist !== undefined && wlist.length > 0) {
+            let current_keyword = wlist.shift()
+            if (current_keyword !== undefined) {
+                let payload = change_cl(inject(content, current_keyword))
+                let result = await snr(url, payload, use_crypt)
+                let content_length = Number(parse_content(result))
+                let status_code = parse_status(result)
+                result_table.push([current_keyword, content_length, status_code])
+                }
+            }
+        return result_table
+        }  catch (error) {
+           console.log(error)
+    }
+}
+
+
+async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
     try {    
         let result_table = []
         while (wlist !== undefined && wlist.length > 0) {
@@ -161,6 +182,8 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
 async function sniper() {
     // Create worker array
     let worker_promises
+    const passwords: string = fs.readFileSync(String(args.wlist ? args.wlist : args.w), 'utf-8'); 
+    let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
     if (url.protocol === 'https:') {
         worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, true));
     } else {
@@ -170,6 +193,22 @@ async function sniper() {
     let result = await Promise.allSettled(worker_promises)
     return result
 }
+
+
+async function ram() {
+    // Create worker array
+    let worker_promises
+    const passlist: string = fs.readFileSync(String(args.p ? args.p : args.pass), 'utf-8')
+    let passwords = passlist.split("\n").map(p => p.trim()).filter(p => p !== "");
+    const userlist = fs.readFileSync(String(args.p ? args.p : args.pass), 'utf-8')
+
+    if (url.protocol === 'https:') {
+    worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => ram_worker(content, chunk, url, true));
+    } else {
+        worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => ram_worker(content, chunk, url, false));
+    }
+}
+
 
 // Save to csv
 function save_to_csv(result: PromiseSettledResult<(string | number | null)[][] | undefined>[]) {
@@ -206,13 +245,14 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null)[][] |
 }
 
 // return selected function
-function mode_select(mode: string): () => Promise<any> {
+function mode_select(mode: string): () => Promise<PromiseSettledResult<(string | number | null)[][] | undefined>[]> {
     return mode === 'sniper' 
         ? sniper
         : mode === 'ram'
         ? ram
         : spyder
 }
+
 
 // Parse args and assign options to constants / variables
 const args = parse_args()
@@ -223,11 +263,12 @@ if (args.help || args.h) {
 
 const content: string = fs.readFileSync(String(args.path), 'utf-8'); // Synchronous function, rest of program will wait until finished
 const url = new URL(String(args.url))
-const passwords: string = fs.readFileSync(String(args.wlist), 'utf-8'); 
-let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
 const number_of_workers = args.workers || args.w ? Number(args.workers) : 10
+
+// Set attack mode and run attack
 const attack = mode_select(args.m ? args.m : args.mode)
-attack()
+const result = await attack()
+save_to_csv(result)
 
 
 
