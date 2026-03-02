@@ -91,26 +91,35 @@ function tls_snr(url: URL, payload: string): Promise<string> {
 }
 
 
-function snr(url: URL, payload: string): Promise<string> {
+function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
     return new Promise((resolve, reject) => {
         try {
             let buffer = ''
-            const wsock = net.connect({host: url.hostname, port: Number(url.port)}, ()=>{})
-            wsock.on('connect', ()=> {
+            let wsock: net.Socket | tls.TLSSocket;
+            if (use_crypt === false) {
+                wsock = net.connect({host: url.hostname, port: Number(url.port)})
+                wsock.on('connect', ()=> {
+                    wsock.write(payload, 'utf-8')
+                })
+            } else {
+                wsock = tls.connect({host: url.hostname, port: Number(url.port), rejectUnauthorized: false})
+                wsock.on('secureConnect', ()=> {
                 wsock.write(payload, 'utf-8')
             })
-            wsock.on('data', function crec(chunk) {
-                buffer += chunk 
-                if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer))) {
-                    wsock.off('data', crec)
+            }
+                wsock.on('data', function crec(chunk) {
+                    buffer += chunk 
+                    if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer))) {
+                        wsock.off('data', crec)
+                        wsock.end()
+                        resolve(buffer)
+                    }
+                })
+
+                wsock.on('error', (error) => {
                     wsock.end()
-                    resolve(buffer)
-                }
-            })
-            wsock.on('error', (error) => {
-                wsock.end()
-                reject(error)
-            })
+                    reject(error)
+                })
         } catch (error) {
             console.log(error)
             reject(error)
@@ -129,14 +138,14 @@ function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<stri
     return password_chunks
 }
 
-async function sniper_worker(content: string, wlist: Array<string>, url: URL, tls: boolean) {
+async function sniper_worker(content: string, wlist: Array<string>, url: URL, use_crypt: boolean) {
     try {    
         let result_table = []
         while (wlist !== undefined && wlist.length > 0) {
             let current_keyword = wlist.shift()
             if (current_keyword !== undefined) {
                 let payload = change_cl(inject(content, current_keyword))
-                let result = await snr(url, payload)
+                let result = await snr(url, payload, use_crypt)
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
                 result_table.push([current_keyword, content_length, status_code])
@@ -151,9 +160,7 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, tl
 
 async function sniper() {
     // Create worker array
-
     let worker_promises
-
     if (url.protocol === 'https:') {
         worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, true));
     } else {
@@ -161,7 +168,7 @@ async function sniper() {
     }
 
     let result = await Promise.allSettled(worker_promises)
-    return 
+    return result
 }
 
 // Save to csv
@@ -198,6 +205,14 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null)[][] |
     }
 }
 
+// return selected function
+function mode_select(mode: string): () => Promise<any> {
+    return mode === 'sniper' 
+        ? sniper
+        : mode === 'ram'
+        ? ram
+        : spyder
+}
 
 // Parse args and assign options to constants / variables
 const args = parse_args()
@@ -211,13 +226,10 @@ const url = new URL(String(args.url))
 const passwords: string = fs.readFileSync(String(args.wlist), 'utf-8'); 
 let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
 const number_of_workers = args.workers || args.w ? Number(args.workers) : 10
+const attack = mode_select(args.m ? args.m : args.mode)
+attack()
 
-// Sniper mode
 
-if (args.m === 'sniper' || args.mode === 'sniper') {
-    sniper()
-}
 
-if args.m === 
 
 
