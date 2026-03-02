@@ -17,7 +17,7 @@ const path_1 = __importDefault(require("path"));
 const express_session_1 = __importDefault(require("express-session"));
 const db_1 = __importDefault(require("./db/db"));
 const app = (0, express_1.default)();
-const PORT = 3000;
+const PORT = 4444;
 /* Session Storage
 * creates a session object on the server (info about who is using the server)
 * maps it to a ID stored with cookies
