@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const express_session_1 = __importDefault(require("express-session"));
+const db_1 = __importDefault(require("./db/db"));
 const app = (0, express_1.default)();
 const PORT = 3000;
 /* Session Storage
@@ -45,25 +55,31 @@ app.get("/dashboard", requireAuth, (req, res) => {
 /* Login/Authentication controller
 * To lazy to comment rn
 */
-app.post('/login', (req, res) => {
+app.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { user, pass } = req.body;
     console.log(`Login attempt for user: ${user}`);
-    //Checks for user
-    if (user === 'admin' && pass === '1234') {
-        req.session.isLoggedIn = true;
-        req.session.username = user;
-        //Tells the server to write the logged in status before doing anything else (to prevent issues when accsesing dashboard too fast)
-        req.session.save((err) => {
-            if (err) {
-                return res.status(500).json({ success: false, message: 'Session error' });
-            }
-            res.status(200).json({ success: true, message: 'Success, logged in' });
-        });
+    try {
+        const [rows] = yield db_1.default.execute('SELECT * FROM users WHERE username = ? AND password = ?', [user, pass]);
+        if (rows.length > 0) {
+            const dbUser = rows[0];
+            req.session.isLoggedIn = true;
+            req.session.username = dbUser.username;
+            req.session.save((err) => {
+                if (err) {
+                    return res.status(500).json({ success: false, message: 'Session error' });
+                }
+                res.status(200).json({ success: true, message: 'Success, logged in' });
+            });
+        }
+        else {
+            res.status(401).json({ success: false, message: 'Invalid username or password.' });
+        }
     }
-    else {
-        res.status(401).json({ success: false, message: 'Invalid username or password.' });
+    catch (error) {
+        console.error("Database error: error");
+        res.status(500).json({ success: false, message: "Internal server error" });
     }
-});
+}));
 /* Server
 * Starts the server
 */

@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import session from 'express-session';
+import pool from './db/db';
 
 const app = express();
 const PORT = 3000;
@@ -45,26 +46,36 @@ app.get("/dashboard", requireAuth, (req, res) => {
 /* Login/Authentication controller
 * To lazy to comment rn
 */ 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const { user, pass } = req.body;
 
     console.log(`Login attempt for user: ${user}`);
+    try {
+        const[rows]: any = await pool.execute(
+            `SELECT * FROM users WHERE username = '${user}' AND password = '${pass}'`,
+            [user, pass]
+        );
 
-    //Checks for user
-    if (user === 'admin' && pass === '1234') {
-        req.session.isLoggedIn = true;
-        req.session.username = user;
-    
-    //Tells the server to write the logged in status before doing anything else (to prevent issues when accsesing dashboard too fast)
-    req.session.save((err) => {
+        if (rows.length > 0) {
+            const dbUser = rows[0];
+            req.session.isLoggedIn = true;
+            req.session.username = dbUser.username;
+
+            req.session.save((err) => {
+            
             if (err) {
                 return res.status(500).json({ success: false, message: 'Session error' });
             }
             res.status(200).json({ success: true, message: 'Success, logged in' });
         });
+
     } else {
         res.status(401).json({ success: false, message: 'Invalid username or password.' });
-    }
+    } 
+    } catch (error){
+        console.error("Database error: error");
+        res.status(500).json({success: false, message: "Internal server error"});
+    }    
 });
 
 /* Server
