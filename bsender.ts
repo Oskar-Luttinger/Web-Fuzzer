@@ -1,14 +1,13 @@
 // Baby sender
 
-import net from "net";
+import * as net from "net";
 import * as fs from 'fs';
 import { URL } from 'url'; 
 import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
-import tls from "tls"
+import * as tls from "tls"
 
 
 const banner = `
-
 
 ░▒▓███████▓▒░       ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓███████▓▒░    ░▒▓█▓▒░░▒▓█▓▒░ 
 ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░   ░▒▓█▓▒░░▒▓█▓▒░ 
@@ -22,28 +21,26 @@ const banner = `
 
 const sub_banner = `
 
-
 ░█▀█░█▀▄░█▀▀░░░█░█░█▀█░█░█░░░█▀▄░█▀▀░█▀█░█▀▄░░░█░█░█▀▀░▀█▀░▀▀█
 ░█▀█░█▀▄░█▀▀░░░░█░░█░█░█░█░░░█░█░█▀▀░█▀█░█░█░░░░█░░█▀▀░░█░░░▀░
 ░▀░▀░▀░▀░▀▀▀░░░░▀░░▀▀▀░▀▀▀░░░▀▀░░▀▀▀░▀░▀░▀▀░░░░░▀░░▀▀▀░░▀░░░▀░
-
 
 `
 
 const helpmsg = `
 
-/‾‾\
-|  |
-@  @
-|| |/
-|| ||
-|\_/|
-\___/
-  /\
-/‾  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
-| It looks like you are trying to fuzz something |
-| Would you like some help with that?            |
-\________________________________________________/
+    /‾‾\    
+    |  |    
+    @  @    
+    || |/   
+    || ||   
+    |\\_/|   
+    \\___/   
+      /\\    
+    /‾  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\\  
+    | It looks like you are trying to fuzz something |  
+    | Would you like some help with that?            |  
+    \\________________________________________________/  
 
 Usage: 
 
@@ -88,15 +85,10 @@ Description of arguments and values:
 --verbose = increases the verbosity of the program i.e how much info it prints.
 `
 
-function print_neon_green(message: string): void {
-    console.log('\x1b[92m' + message + '\x1b[0m');
-}
-
 function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
         fuzzmarker = 'FUZZ'
     }
-
     const [prefix, suffix] = request.split(fuzzmarker)
     const payload = prefix + keyword + suffix
     return payload
@@ -114,12 +106,13 @@ function get_jitter(baseSleep: number): number {
 }
 
 function print_error(error: string) {
-    print_neon_green(error)
+    console.log(error)
     process.exit(1)
 }
 
 
 function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
+    console.log('HELLO FROM SNR!')
     return new Promise((resolve, reject) => {
         try {
             let buffer = ''
@@ -127,15 +120,18 @@ function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
             if (use_crypt === false) {
                 wsock = net.connect({host: url.hostname, port: Number(url.port)})
                 wsock.on('connect', ()=> {
+                    console.log('HELLO FROM NET HTTP')
                     wsock.write(payload, 'utf-8')
                 })
             } else {
                 wsock = tls.connect({host: url.hostname, port: Number(url.port), rejectUnauthorized: false})
                 wsock.on('secureConnect', ()=> {
+                console.log('HELLO FROM TLS HTTPS')
                 wsock.write(payload, 'utf-8')
             })
             }
                 wsock.on('data', function crec(chunk) {
+                    console.log('DATA RECIEVED')
                     buffer += chunk 
                     if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer))) {
                         wsock.off('data', crec)
@@ -187,13 +183,18 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
 async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
     try {    
         let result_table = []
+        console.log(passlist)
         while (userlist !== undefined && userlist.length > 0) {
             let current_username = userlist.shift()
             let payload = inject(content, current_username!, 'USER')
-            while(passlist !== undefined && passlist.length >0) {
-                let current_password = passlist.shift()
-                payload = change_cl(inject(content, current_password!, 'PASS'))
+            for(let i = 0; i < passlist.length; i += 1) {
+                let current_password = passlist[i]
+                console.log(current_password)
+                payload = change_cl(inject(payload, current_password!, 'PASS'))
+                console.log('GAAAA')
                 let result = await snr(url, payload, use_crypt)
+                console.log(result)
+                console.log('hello??')
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
                 result_table.push([current_username, current_password, content_length, status_code])
@@ -220,10 +221,10 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
 
 async function ram() {
     // Create worker array
-    const passlist: string = fs.readFileSync(String(args.p ? args.p : args.pass), 'utf-8')
+    const passlist: string = fs.readFileSync(String(args.pl ? args.pl : args.passlist), 'utf-8')
     let passwords = passlist.split("\n").map(p => p.trim()).filter(p => p !== "");
 
-    const userlist = fs.readFileSync(String(args.p ? args.p : args.pass), 'utf-8')
+    const userlist = fs.readFileSync(String(args.ul ? args.ul : args.userlist), 'utf-8')
     let usernames = userlist.split("\n").map(p => p.trim()).filter(p => p !== "");
 
     let username_chunks = pass_chunk(usernames, number_of_workers)
@@ -233,6 +234,7 @@ async function ram() {
         const passw_chunk = password_chunks[index];
         return ram_worker(content, user_chunk, passw_chunk, url, url.protocol === 'https:' ? true : false);
     });
+    console.log(worker_promises)
     let result = await Promise.allSettled(worker_promises)
     return result
 }
@@ -277,22 +279,23 @@ function spyder() {
     console.log('hej')
 }
 
+console.log(banner)
+
 // Parse args and assign options to constants / variables
 const args = parse_args()
 let verbose: boolean = false
 if (args.help || args.h) {
-    print_neon_green(sub_banner)
-    print_neon_green(helpmsg)
+    console.log(sub_banner)
+    console.log(helpmsg)
     process.exit(0)
 }
 
 if (args.v || args.verbose) {
     verbose = true
 }
-
-print_neon_green(banner)
-const content: string = fs.readFileSync(String(args.path), 'utf-8'); 
-const url = new URL(String(args.url))
+console.log(args)
+const content: string = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
+const url = new URL(String(args.url ? args.url : args.u))
 let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
 let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
 let jitter: boolean = false
@@ -309,16 +312,19 @@ if (args.j || args.jitter) {
 
 // Set attack mode and run attack
 let result:  PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[];
-const mode = args.m ? args.m : args.mode ? args.mode : print_error('You must supply an argument to mode! (see help message rudy -h)')
+const mode = args.m ? args.m : args.mode
 
-if (mode === 'sniper') {
-    result = await sniper()
-    save_to_csv(result)
-} else if (mode === 'ram') {
-    result = await ram()
-    save_to_csv(result)
+async function main(): Promise<void> {
+    if (mode === 'sniper') {
+        result = await sniper()
+        save_to_csv(result)
+    } else if (mode === 'ram') {
+        result = await ram()
+        save_to_csv(result)
+    }
 }
 
+main()
 
 
 
