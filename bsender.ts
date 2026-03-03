@@ -112,46 +112,74 @@ function print_error(error: string) {
 
 
 function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
-    console.log('HELLO FROM SNR!')
+    console.log('HELLO FROM SNR!');
+    
     return new Promise((resolve, reject) => {
         try {
-            let buffer = ''
+            let buffer = '';
             let wsock: net.Socket | tls.TLSSocket;
+
+            // 1. Hantera porten ordentligt (url.port är ofta tom sträng)
+            const port = url.port ? Number(url.port) : (use_crypt ? 443 : 80);
+            const host = url.hostname;
+
+            // 2. Skapa anslutningen
             if (use_crypt === false) {
-                wsock = net.connect({host: url.hostname, port: Number(url.port)})
-                wsock.on('connect', ()=> {
-                    console.log('HELLO FROM NET HTTP')
-                    wsock.write(payload, 'utf-8')
-                })
+                wsock = net.connect({ host, port });
+                wsock.on('connect', () => {
+                    console.log('HELLO FROM NET HTTP');
+                    // Se till att payload har HTTP-avslutning (\r\n\r\n)
+                    wsock.write(payload, 'utf-8');
+                });
             } else {
-                wsock = tls.connect({host: url.hostname, port: Number(url.port), rejectUnauthorized: false})
-                wsock.on('secureConnect', ()=> {
-                console.log('HELLO FROM TLS HTTPS')
-                wsock.write(payload, 'utf-8')
-            })
+                wsock = tls.connect({ host, port, rejectUnauthorized: false });
+                wsock.on('secureConnect', () => {
+                    console.log('HELLO FROM TLS HTTPS');
+                    wsock.write(payload, 'utf-8');
+                });
             }
-                wsock.on('data', function crec(chunk) {
-                    console.log('DATA RECIEVED')
-                    buffer += chunk 
-                    if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer))) {
-                        wsock.off('data', crec)
-                        wsock.end()
-                        resolve(buffer)
+
+            // 3. Gemensamma händelselyssnare
+            wsock.on('data', function crec(chunk) {
+                console.log('DATA RECEIVED');
+                buffer += chunk.toString('utf-8');
+                
+                // Kontrollera om vi har fått hela svaret
+                // Obs: parse_content måste kunna hantera ofullständig buffer!
+                try {
+                    const contentLength = Number(parse_content(buffer));
+                    if (!isNaN(contentLength) && Buffer.byteLength(buffer, 'utf-8') >= contentLength) {
+                        wsock.off('data', crec);
+                        wsock.end();
+                        resolve(buffer);
                     }
-                })
+                } catch (e) {
+                    // Om parse_content kraschar för att headern inte är klar än, fortsätt vänta
+                }
+            });
 
-                wsock.on('error', (error) => {
-                    wsock.end()
-                    reject(error)
-                })
+            wsock.on('end', () => {
+                resolve(buffer);
+            });
+
+            wsock.on('error', (error) => {
+                console.error('Socket error:', error);
+                wsock.destroy();
+                reject(error);
+            });
+
+            // 4. Timeout-skydd (viktigt så promiset inte hänger för evigt)
+            wsock.setTimeout(10000, () => {
+                wsock.destroy();
+                reject(new Error('Timeout after 10s'));
+            });
+
         } catch (error) {
-            console.log(error)
-            reject(error)
+            console.log('Catch error:', error);
+            reject(error);
         }
-    })
+    });
 }
-
-
 
 function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<string>> {
     let password_chunks = []
