@@ -114,35 +114,8 @@ function get_jitter(baseSleep: number): number {
 }
 
 function print_error(error: string) {
-    console.log(error)
+    print_neon_green(error)
     process.exit(1)
-}
-
-function tls_snr(url: URL, payload: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-        try {
-            let buffer = ''
-            const wsock = tls.connect({host: url.hostname, port: Number(url.port), rejectUnauthorized: false}, ()=>{})
-            wsock.on('secureConnect', ()=> {
-                wsock.write(payload, 'utf-8')
-            })
-            wsock.on('data', function crec(chunk) {
-                buffer += chunk 
-                if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer))) {
-                    wsock.off('data', crec)
-                    wsock.end()
-                    resolve(buffer)
-                }
-            })
-            wsock.on('error', (error) => {
-                wsock.end()
-                reject(error)
-            })
-        } catch (error) {
-            console.log(error)
-            reject(error)
-        }
-    })
 }
 
 
@@ -208,7 +181,6 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
             }
         return result_table
         }  catch (error) {
-           console.log(error)
     }
 }
 
@@ -235,7 +207,7 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
 }
 
 
-async function sniper() {
+ async function sniper() {
     // Create worker array
     const passwords: string = fs.readFileSync(String(args.wlist ? args.wlist : args.w), 'utf-8'); 
     let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
@@ -267,7 +239,7 @@ async function ram() {
 1
 
 // Save to csv
-function save_to_csv(result: PromiseSettledResult<(string | number | null)[][] | undefined>[]) {
+function save_to_csv(result: PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[]) {
     let file_path: string
     let output = args.o ? args.o : args.output
     if (typeof output === 'string') {
@@ -305,16 +277,6 @@ function spyder() {
     console.log('hej')
 }
 
-// return selected function
-function mode_select(mode: string) {
-    return mode === 'sniper' 
-        ? sniper
-        : mode === 'ram'
-        ? ram
-        : spyder
-}
-
-
 // Parse args and assign options to constants / variables
 const args = parse_args()
 let verbose: boolean = false
@@ -329,7 +291,7 @@ if (args.v || args.verbose) {
 }
 
 print_neon_green(banner)
-const content: string = fs.readFileSync(String(args.path), 'utf-8'); // Synchronous function, rest of program will wait until finished
+const content: string = fs.readFileSync(String(args.path), 'utf-8'); 
 const url = new URL(String(args.url))
 let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
 let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
@@ -346,9 +308,18 @@ if (args.j || args.jitter) {
 
 
 // Set attack mode and run attack
-const attack = mode_select(String(args.m ? args.m : args.mode))
-const result = await attack()
-save_to_csv(result)
+let result:  PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[];
+const mode = args.m ? args.m : args.mode ? args.mode : print_error('You must supply an argument to mode! (see help message rudy -h)')
+
+if (mode === 'sniper') {
+    result = await sniper()
+    save_to_csv(result)
+} else if (mode === 'ram') {
+    result = await ram()
+    save_to_csv(result)
+}
+
+
 
 
 
