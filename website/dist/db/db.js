@@ -16,7 +16,7 @@ const promise_1 = __importDefault(require("mysql2/promise"));
 const pool = promise_1.default.createPool({
     host: "localhost",
     user: "root",
-    password: "123",
+    password: "1234",
     database: "my_database",
     waitForConnections: true
 });
