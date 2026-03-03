@@ -5,10 +5,45 @@ import * as fs from 'fs';
 import { URL } from 'url'; 
 import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
 import tls from "tls"
-import { worker } from "cluster";
+
+
+const banner = `
+
+
+░▒▓███████▓▒░       ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓███████▓▒░    ░▒▓█▓▒░░▒▓█▓▒░ 
+░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░   ░▒▓█▓▒░░▒▓█▓▒░ 
+░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░   ░▒▓█▓▒░░▒▓█▓▒░ 
+░▒▓███████▓▒░       ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░    ░▒▓██████▓▒░  
+░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░     
+░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░▒▓█▓▒░     
+░▒▓█▓▒░░▒▓█▓▒░▒▓██▓▒░░▒▓██████▓▒░░▒▓██▓▒░▒▓███████▓▒░░▒▓██▓▒░▒▓█▓▒░     
+                                                                   
+`
+
+const sub_banner = `
+
+
+░█▀█░█▀▄░█▀▀░░░█░█░█▀█░█░█░░░█▀▄░█▀▀░█▀█░█▀▄░░░█░█░█▀▀░▀█▀░▀▀█
+░█▀█░█▀▄░█▀▀░░░░█░░█░█░█░█░░░█░█░█▀▀░█▀█░█░█░░░░█░░█▀▀░░█░░░▀░
+░▀░▀░▀░▀░▀▀▀░░░░▀░░▀▀▀░▀▀▀░░░▀▀░░▀▀▀░▀░▀░▀▀░░░░░▀░░▀▀▀░░▀░░░▀░
+
+
+`
 
 const helpmsg = `
-It looks like you need some help. (*) marks required arguments
+
+/‾‾\
+|  |
+@  @
+|| |/
+|| ||
+|\_/|
+\___/
+  /\
+/‾  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+| It looks like you are trying to fuzz something |
+| Would you like some help with that?            |
+\________________________________________________/
 
 Usage: 
 
@@ -18,11 +53,13 @@ bsender [-u=<url> | --url=<url>]* [-m=<sniper, ram, spyder> | --mode=<sniper, ra
 [-w=<number of workers> | --workers=<number of workers>]
 [-o=<path to output> | --output=<path to output>] [-d=<ms> | --delay=<ms>]
 [-h  | --help] [-s | --stealth] [-v | --verbose]
-[-vv | --very_verbose] [-j | --jitter]
+[-j | --jitter]
 
 Description of arguments and values:
 
---url = url AND port to send payload to. Ex: http://test.com:80
+--url (*) = url AND port to send payload to. Ex: http://test.com:80
+
+--payload (*) = path to raw http payload to inject into 
 
 --userlist = APPLIES TO RAM MODE: path to list of usernames to use in the attack. Ex: C:\\Users\\Attacker\\user-list.txt. 
 
@@ -37,7 +74,7 @@ Description of arguments and values:
 --delay = sets a delay between each request in every worker. Note: All workers will still send their request at 
           the same time so it is not stealthy to have a long sleep but a high amount of workers.
 
---mode = sets attack mode:
+--mode (*) = sets attack mode:
             <sniper> = Fuzzes one parameter
             <ram> = fuzzes two parameters. For every word in the userlist it will try every word in the pass list 
             <spyder> = crawl the target domain recursively
@@ -46,11 +83,14 @@ Description of arguments and values:
 
 --stealth = sets the fuzzer to send only one request / second to reduce noise.
 
---jitter = REQUIRES THE SLEEP ARGUMENT: adds random intervals between sleep and sleep * 4 for each request to disrupt patterns. 
+--jitter = REQUIRES THE SLEEP ARGUMENT: adds random intervals between sleep and sleep * 8 for each request to disrupt patterns. 
 
---verbose | --very_verbose = increases the verbosity of the program i.e how much info it prints.
+--verbose = increases the verbosity of the program i.e how much info it prints.
 `
 
+function print_neon_green(message: string): void {
+    console.log('\x1b[92m' + message + '\x1b[0m');
+}
 
 function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
@@ -62,6 +102,21 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
     return payload
 } 
 
+function sleep(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
+function get_jitter(baseSleep: number): number {
+    // Generate a random number between delay and delay * 8
+    const min = baseSleep;
+    const max = baseSleep * 8;
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function print_error(error: string) {
+    console.log(error)
+    process.exit(1)
+}
 
 function tls_snr(url: URL, payload: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -133,7 +188,7 @@ function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<stri
     let password_chunks = []
     const len = chunk.length/num_workers
     for(let i = 0; num_workers > i; i = i+1){
-        password_chunks.push(chunk.splice(0, len))SS
+        password_chunks.push(chunk.splice(0, len))
     }
     return password_chunks
 }
@@ -149,13 +204,13 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
             let content_length = Number(parse_content(result))
             let status_code = parse_status(result)
             result_table.push([current_keyword, content_length, status_code])
+            await sleep(jitter ? get_jitter(delay) : delay)
             }
         return result_table
         }  catch (error) {
            console.log(error)
     }
 }
-
 
 async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
     try {    
@@ -170,6 +225,7 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
                 result_table.push([current_username, current_password, content_length, status_code])
+                await sleep(jitter ? get_jitter(delay) : delay)
                 }
             }  
         return result_table
@@ -181,15 +237,10 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
 
 async function sniper() {
     // Create worker array
-    let worker_promises
     const passwords: string = fs.readFileSync(String(args.wlist ? args.wlist : args.w), 'utf-8'); 
     let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
-    if (url.protocol === 'https:') {
-        worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, true));
-    } else {
-        worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, false));
-    }
 
+    let worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, url.protocol === 'https:' ? true : false));
     let result = await Promise.allSettled(worker_promises)
     return result
 }
@@ -197,26 +248,30 @@ async function sniper() {
 
 async function ram() {
     // Create worker array
-    let worker_promises
     const passlist: string = fs.readFileSync(String(args.p ? args.p : args.pass), 'utf-8')
     let passwords = passlist.split("\n").map(p => p.trim()).filter(p => p !== "");
 
     const userlist = fs.readFileSync(String(args.p ? args.p : args.pass), 'utf-8')
     let usernames = userlist.split("\n").map(p => p.trim()).filter(p => p !== "");
 
-    if (url.protocol === 'https:') {
-    worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => ram_worker(content, chunk, url, true));
-    } else {
-        worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => ram_worker(content, chunk, url, false));
-    }
+    let username_chunks = pass_chunk(usernames, number_of_workers)
+    let password_chunks = pass_chunk(passwords, number_of_workers)
+    
+    const worker_promises = username_chunks.map((user_chunk, index) => {
+        const passw_chunk = password_chunks[index];
+        return ram_worker(content, user_chunk, passw_chunk, url, url.protocol === 'https:' ? true : false);
+    });
+    let result = await Promise.allSettled(worker_promises)
+    return result
 }
-
+1
 
 // Save to csv
 function save_to_csv(result: PromiseSettledResult<(string | number | null)[][] | undefined>[]) {
-    let file_path
-    if (args.o || args.output) {
-        file_path = args.o ? args.o : args.output
+    let file_path: string
+    let output = args.o ? args.o : args.output
+    if (typeof output === 'string') {
+        file_path = args.o ? String(args.o) : String(args.output)
     } else {
         file_path = 'output.csv'
     }
@@ -246,8 +301,12 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null)[][] |
     }
 }
 
+function spyder() {
+    console.log('hej')
+}
+
 // return selected function
-function mode_select(mode: string): () => Promise<PromiseSettledResult<(string | number | null)[][] | undefined>[]> {
+function mode_select(mode: string) {
     return mode === 'sniper' 
         ? sniper
         : mode === 'ram'
@@ -258,17 +317,36 @@ function mode_select(mode: string): () => Promise<PromiseSettledResult<(string |
 
 // Parse args and assign options to constants / variables
 const args = parse_args()
+let verbose: boolean = false
 if (args.help || args.h) {
-    console.log(helpmsg)
+    print_neon_green(sub_banner)
+    print_neon_green(helpmsg)
     process.exit(0)
 }
 
+if (args.v || args.verbose) {
+    verbose = true
+}
+
+print_neon_green(banner)
 const content: string = fs.readFileSync(String(args.path), 'utf-8'); // Synchronous function, rest of program will wait until finished
 const url = new URL(String(args.url))
-const number_of_workers = args.workers || args.w ? Number(args.workers) : 10
+let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
+let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
+let jitter: boolean = false
+
+if (args.s || args.stealth) {
+    delay = 1000
+    number_of_workers = 1
+}
+
+if (args.j || args.jitter) {
+    jitter = true
+}
+
 
 // Set attack mode and run attack
-const attack = mode_select(args.m ? args.m : args.mode)
+const attack = mode_select(String(args.m ? args.m : args.mode))
 const result = await attack()
 save_to_csv(result)
 
