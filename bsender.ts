@@ -3,8 +3,9 @@
 import * as net from "net";
 import * as fs from 'fs';
 import { URL } from 'url'; 
-import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
+import { parse_args, parse_content, parse_status, change_cl, get_body, get_url } from "./parsers"
 import * as tls from "tls"
+import * as path from 'path'
 
 
 const banner = `
@@ -112,46 +113,68 @@ function print_error(error: string) {
 
 
 function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
-    console.log('HELLO FROM SNR!')
+    
     return new Promise((resolve, reject) => {
         try {
-            let buffer = ''
+            let buffer = '';
             let wsock: net.Socket | tls.TLSSocket;
+
+            // 1. Hantera porten ordentligt (url.port är ofta tom sträng)
+            const port = url.port ? Number(url.port) : (use_crypt ? 443 : 80);
+            const host = url.hostname;
+
+            // 2. Skapa anslutningen
             if (use_crypt === false) {
-                wsock = net.connect({host: url.hostname, port: Number(url.port)})
-                wsock.on('connect', ()=> {
-                    console.log('HELLO FROM NET HTTP')
-                    wsock.write(payload, 'utf-8')
-                })
+                wsock = net.connect({ host, port });
+                wsock.on('connect', () => {
+                    // Se till att payload har HTTP-avslutning (\r\n\r\n)
+                    wsock.write(payload, 'utf-8');
+                });
             } else {
-                wsock = tls.connect({host: url.hostname, port: Number(url.port), rejectUnauthorized: false})
-                wsock.on('secureConnect', ()=> {
-                console.log('HELLO FROM TLS HTTPS')
-                wsock.write(payload, 'utf-8')
-            })
+                wsock = tls.connect({ host, port, rejectUnauthorized: false });
+                wsock.on('secureConnect', () => {
+                    wsock.write(payload, 'utf-8');
+                });
             }
-                wsock.on('data', function crec(chunk) {
-                    console.log('DATA RECIEVED')
-                    buffer += chunk 
-                    if (Buffer.byteLength(buffer, 'utf-8') > Number(parse_content(buffer))) {
-                        wsock.off('data', crec)
-                        wsock.end()
-                        resolve(buffer)
+
+            // 3. Gemensamma händelselyssnare
+            wsock.on('data', function crec(chunk) {
+                buffer += chunk.toString('utf-8');
+                
+                // Check that we have recieved *enough* data
+                try {
+                    const contentLength = Number(parse_content(buffer));
+                    if (!isNaN(contentLength) && Buffer.byteLength(buffer, 'utf-8') >= contentLength) {
+                        wsock.off('data', crec);
+                        wsock.end();
+                        resolve(buffer);
                     }
-                })
+                } catch (e) {
+                }
+            });
 
-                wsock.on('error', (error) => {
-                    wsock.end()
-                    reject(error)
-                })
+            wsock.on('end', () => {
+                resolve(buffer);
+            });
+
+            wsock.on('error', (error) => {
+                console.error('Socket error:', error);
+                wsock.destroy();
+                reject(error);
+            });
+
+            // Prevent dead-hangs
+            wsock.setTimeout(10000, () => {
+                wsock.destroy();
+                reject(new Error('Timeout after 10s'));
+            });
+
         } catch (error) {
-            console.log(error)
-            reject(error)
+            console.log('Catch error:', error);
+            reject(error);
         }
-    })
+    });
 }
-
-
 
 function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<string>> {
     let password_chunks = []
@@ -183,18 +206,16 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
 async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
     try {    
         let result_table = []
-        console.log(passlist)
         while (userlist !== undefined && userlist.length > 0) {
             let current_username = userlist.shift()
-            let payload = inject(content, current_username!, 'USER')
+            let payload = inject(content, current_username!, 'USERFUZZ')
             for(let i = 0; i < passlist.length; i += 1) {
                 let current_password = passlist[i]
                 console.log(current_password)
-                payload = change_cl(inject(payload, current_password!, 'PASS'))
-                console.log('GAAAA')
-                let result = await snr(url, payload, use_crypt)
+                const payload_acc = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
+                console.log(payload_acc)
+                let result = await snr(url, payload_acc, use_crypt)
                 console.log(result)
-                console.log('hello??')
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
                 result_table.push([current_username, current_password, content_length, status_code])
@@ -210,12 +231,48 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
 
  async function sniper() {
     // Create worker array
-    const passwords: string = fs.readFileSync(String(args.wlist ? args.wlist : args.w), 'utf-8'); 
+    const passwords: string = fs.readFileSync(String(args.wlist ? args.wlist : args.wl), 'utf-8'); 
     let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
 
     let worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, url.protocol === 'https:' ? true : false));
     let result = await Promise.allSettled(worker_promises)
     return result
+}
+
+
+async function spyder_worker(base_url: URL, visited: Set<string>, queue: Array<URL>) {
+    while (true) {
+        const current = queue.shift();
+        if (!current) break;
+        try {
+            console.log("Processing:", current.href);
+            const payload = `GET ${current.pathname + current.search} HTTP/1.1\r
+                            Host: ${base_url.host}\r
+                            User-Agent: Mozilla/5.0\r
+                            Connection: close\r
+                            \r
+                            `;
+            const response = await snr(current, payload, true);
+            const body = get_body(response);
+            save_page(current, body);
+            const links = get_url(body);
+            for (const link of links) {
+                try {
+                    const full_url = new URL(link, base_url);
+                    if (full_url.host === base_url.host) {
+                        if (!visited.has(full_url.href)) {
+                            visited.add(full_url.href);
+                            queue.push(full_url);
+                        }
+                    }
+                } catch {
+                    // Ignore invalid URLs
+                }
+            }
+        } catch (err) {
+            console.log("Worker error:", err);
+        }
+    }
 }
 
 
@@ -228,11 +285,9 @@ async function ram() {
     let usernames = userlist.split("\n").map(p => p.trim()).filter(p => p !== "");
 
     let username_chunks = pass_chunk(usernames, number_of_workers)
-    let password_chunks = pass_chunk(passwords, number_of_workers)
     
     const worker_promises = username_chunks.map((user_chunk, index) => {
-        const passw_chunk = password_chunks[index];
-        return ram_worker(content, user_chunk, passw_chunk, url, url.protocol === 'https:' ? true : false);
+        return ram_worker(content, user_chunk, passwords, url, url.protocol === 'https:' ? true : false);
     });
     console.log(worker_promises)
     let result = await Promise.allSettled(worker_promises)
@@ -275,9 +330,37 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null | unde
     }
 }
 
-function spyder() {
-    console.log('hej')
+function save_page(url: URL, content: string) {
+    let filePath = url.pathname;
+
+    if (filePath === "/") {
+        filePath = "/index.html";
+    }
+
+    if (!filePath.endsWith(".html")) {
+        filePath += ".html";
+    }
+
+    const fullPath = path.join("downloaded", filePath);
+
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, content);
 }
+
+async function spyder() {
+    const queue: URL [] = [];
+    const visited = new Set<string>();
+    visited.add(url.href);
+    queue.push(url);
+    const workers = 5; // change to 10 or 20 if you want
+    const workerPromises = [];
+    for (let i = 0; i < workers; i++) {
+        workerPromises.push(spyder_worker(url, visited, queue));
+    }
+    await Promise.all(workerPromises);
+    console.log("Crawling finished");
+}
+
 
 console.log(banner)
 
@@ -321,6 +404,8 @@ async function main(): Promise<void> {
     } else if (mode === 'ram') {
         result = await ram()
         save_to_csv(result)
+    } else if (mode === 'spyder') {
+        spyder()
     }
 }
 
