@@ -40,3 +40,20 @@ export function change_cl(payload: string): string {
 }
 
 
+export function get_body(response : string) : string {
+    const index = response.indexOf("\r\n\r\n")
+    return response.slice(index + 4)
+}
+
+
+export function get_url(html : string) : string[]{
+    const links : string [] = [];
+    const regex = /href="([^"]+)"/gi
+    
+    let match;
+    while((match = regex.exec(html)) !== null) {
+        links.push(match[1]);
+    }
+    return links
+}
+

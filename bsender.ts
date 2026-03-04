@@ -3,8 +3,9 @@
 import * as net from "net";
 import * as fs from 'fs';
 import { URL } from 'url'; 
-import { parse_args, parse_content, parse_status, change_cl } from "./parsers"
+import { parse_args, parse_content, parse_status, change_cl, get_body, get_url } from "./parsers"
 import * as tls from "tls"
+import * as path from 'path'
 
 
 const banner = `
@@ -212,7 +213,7 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
                 let current_password = passlist[i]
                 console.log(current_password)
                 const payload_acc = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
-                console.log(payload)
+                console.log(payload_acc)
                 let result = await snr(url, payload_acc, use_crypt)
                 console.log(result)
                 let content_length = Number(parse_content(result))
@@ -236,6 +237,42 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
     let worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, url.protocol === 'https:' ? true : false));
     let result = await Promise.allSettled(worker_promises)
     return result
+}
+
+
+async function spyder_worker(base_url: URL, visited: Set<string>, queue: Array<URL>) {
+    while (true) {
+        const current = queue.shift();
+        if (!current) break;
+        try {
+            console.log("Processing:", current.href);
+            const payload = `GET ${current.pathname + current.search} HTTP/1.1\r
+                            Host: ${base_url.host}\r
+                            User-Agent: Mozilla/5.0\r
+                            Connection: close\r
+                            \r
+                            `;
+            const response = await snr(current, payload, true);
+            const body = get_body(response);
+            save_page(current, body);
+            const links = get_url(body);
+            for (const link of links) {
+                try {
+                    const full_url = new URL(link, base_url);
+                    if (full_url.host === base_url.host) {
+                        if (!visited.has(full_url.href)) {
+                            visited.add(full_url.href);
+                            queue.push(full_url);
+                        }
+                    }
+                } catch {
+                    // Ignore invalid URLs
+                }
+            }
+        } catch (err) {
+            console.log("Worker error:", err);
+        }
+    }
 }
 
 
@@ -293,9 +330,37 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null | unde
     }
 }
 
-function spyder() {
-    console.log('hej')
+function save_page(url: URL, content: string) {
+    let filePath = url.pathname;
+
+    if (filePath === "/") {
+        filePath = "/index.html";
+    }
+
+    if (!filePath.endsWith(".html")) {
+        filePath += ".html";
+    }
+
+    const fullPath = path.join("downloaded", filePath);
+
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, content);
 }
+
+async function spyder() {
+    const queue: URL [] = [];
+    const visited = new Set<string>();
+    visited.add(url.href);
+    queue.push(url);
+    const workers = 5; // change to 10 or 20 if you want
+    const workerPromises = [];
+    for (let i = 0; i < workers; i++) {
+        workerPromises.push(spyder_worker(url, visited, queue));
+    }
+    await Promise.all(workerPromises);
+    console.log("Crawling finished");
+}
+
 
 console.log(banner)
 
@@ -339,6 +404,8 @@ async function main(): Promise<void> {
     } else if (mode === 'ram') {
         result = await ram()
         save_to_csv(result)
+    } else if (mode === 'spyder') {
+        spyder()
     }
 }
 
