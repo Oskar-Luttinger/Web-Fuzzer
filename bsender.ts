@@ -144,8 +144,7 @@ function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
                 console.log('DATA RECEIVED');
                 buffer += chunk.toString('utf-8');
                 
-                // Kontrollera om vi har fått hela svaret
-                // Obs: parse_content måste kunna hantera ofullständig buffer!
+                // Check that we have recieved *enough* data
                 try {
                     const contentLength = Number(parse_content(buffer));
                     if (!isNaN(contentLength) && Buffer.byteLength(buffer, 'utf-8') >= contentLength) {
@@ -154,7 +153,6 @@ function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
                         resolve(buffer);
                     }
                 } catch (e) {
-                    // Om parse_content kraschar för att headern inte är klar än, fortsätt vänta
                 }
             });
 
@@ -168,7 +166,7 @@ function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
                 reject(error);
             });
 
-            // 4. Timeout-skydd (viktigt så promiset inte hänger för evigt)
+            // Prevent dead-hangs
             wsock.setTimeout(10000, () => {
                 wsock.destroy();
                 reject(new Error('Timeout after 10s'));
@@ -256,11 +254,9 @@ async function ram() {
     let usernames = userlist.split("\n").map(p => p.trim()).filter(p => p !== "");
 
     let username_chunks = pass_chunk(usernames, number_of_workers)
-    let password_chunks = pass_chunk(passwords, number_of_workers)
     
     const worker_promises = username_chunks.map((user_chunk, index) => {
-        const passw_chunk = password_chunks[index];
-        return ram_worker(content, user_chunk, passw_chunk, url, url.protocol === 'https:' ? true : false);
+        return ram_worker(content, user_chunk, passwords, url, url.protocol === 'https:' ? true : false);
     });
     console.log(worker_promises)
     let result = await Promise.allSettled(worker_promises)
