@@ -176,13 +176,25 @@ function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
     });
 }
 
-function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<string>> {
-    let password_chunks = []
-    const len = chunk.length/num_workers
-    for(let i = 0; num_workers > i; i = i+1){
-        password_chunks.push(chunk.splice(0, len))
+//function pass_chunk(chunk: Array<string>, num_workers: number): Array<Array<string>> {
+//    let password_chunks = []
+//    const len = chunk.length/num_workers
+//    for(let i = 0; num_workers > i; i = i+1){
+//        password_chunks.push(chunk.splice(0, len))
+//    }
+//    return password_chunks
+//}
+
+
+function pass_chunk<T>(arr: T[], workers: number): T[][] {
+    const size = Math.ceil(arr.length / workers);
+    const result: T[][] = [];
+
+    for (let i = 0; i < workers; i++) {
+        result.push(arr.slice(i * size, (i + 1) * size));
     }
-    return password_chunks
+
+    return result;
 }
 
 
@@ -247,11 +259,12 @@ async function spyder_worker(base_url: URL, visited: Set<string>, queue: Array<U
         try {
             console.log("Processing:", current.href);
             const payload = `GET ${current.pathname + current.search} HTTP/1.1\r
-                            Host: ${base_url.host}\r
-                            User-Agent: Mozilla/5.0\r
-                            Connection: close\r
-                            \r
-                            `;
+Host: ${base_url.host}\r
+User-Agent: Mozilla/5.0\r
+Connection: close\r
+\r
+`;
+            console.log(payload)
             const response = await snr(current, payload, true);
             const body = get_body(response);
             save_page(current, body);
@@ -377,7 +390,7 @@ if (args.v || args.verbose) {
     verbose = true
 }
 console.log(args)
-const content: string = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
+let content = ""
 const url = new URL(String(args.url ? args.url : args.u))
 let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
 let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
@@ -399,9 +412,11 @@ const mode = args.m ? args.m : args.mode
 
 async function main(): Promise<void> {
     if (mode === 'sniper') {
+        content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
         result = await sniper()
         save_to_csv(result)
     } else if (mode === 'ram') {
+        content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
         result = await ram()
         save_to_csv(result)
     } else if (mode === 'spyder') {
