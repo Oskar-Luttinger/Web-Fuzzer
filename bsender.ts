@@ -265,7 +265,7 @@ Connection: close\r
 \r
 `;
             console.log(payload)
-            const response = await snr(current, payload, true);
+            const response = await snr(current, payload, base_url.protocol === 'https:' ? true : false);
             const body = get_body(response);
             save_page(current, body);
             const links = get_url(body);
