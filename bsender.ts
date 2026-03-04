@@ -205,16 +205,15 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
 async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
     try {    
         let result_table = []
-        console.log(passlist)
         while (userlist !== undefined && userlist.length > 0) {
             let current_username = userlist.shift()
             let payload = inject(content, current_username!, 'USERFUZZ')
             for(let i = 0; i < passlist.length; i += 1) {
                 let current_password = passlist[i]
                 console.log(current_password)
-                payload = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
+                const payload_acc = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
                 console.log(payload)
-                let result = await snr(url, payload, use_crypt)
+                let result = await snr(url, payload_acc, use_crypt)
                 console.log(result)
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
