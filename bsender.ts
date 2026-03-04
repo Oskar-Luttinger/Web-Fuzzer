@@ -112,7 +112,6 @@ function print_error(error: string) {
 
 
 function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
-    console.log('HELLO FROM SNR!');
     
     return new Promise((resolve, reject) => {
         try {
@@ -127,21 +126,18 @@ function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
             if (use_crypt === false) {
                 wsock = net.connect({ host, port });
                 wsock.on('connect', () => {
-                    console.log('HELLO FROM NET HTTP');
                     // Se till att payload har HTTP-avslutning (\r\n\r\n)
                     wsock.write(payload, 'utf-8');
                 });
             } else {
                 wsock = tls.connect({ host, port, rejectUnauthorized: false });
                 wsock.on('secureConnect', () => {
-                    console.log('HELLO FROM TLS HTTPS');
                     wsock.write(payload, 'utf-8');
                 });
             }
 
             // 3. Gemensamma händelselyssnare
             wsock.on('data', function crec(chunk) {
-                console.log('DATA RECEIVED');
                 buffer += chunk.toString('utf-8');
                 
                 // Check that we have recieved *enough* data
@@ -212,15 +208,14 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
         console.log(passlist)
         while (userlist !== undefined && userlist.length > 0) {
             let current_username = userlist.shift()
-            let payload = inject(content, current_username!, 'USER')
+            let payload = inject(content, current_username!, 'USERFUZZ')
             for(let i = 0; i < passlist.length; i += 1) {
                 let current_password = passlist[i]
                 console.log(current_password)
-                payload = change_cl(inject(payload, current_password!, 'PASS'))
-                console.log('GAAAA')
+                payload = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
+                console.log(payload)
                 let result = await snr(url, payload, use_crypt)
                 console.log(result)
-                console.log('hello??')
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
                 result_table.push([current_username, current_password, content_length, status_code])
@@ -236,7 +231,7 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
 
  async function sniper() {
     // Create worker array
-    const passwords: string = fs.readFileSync(String(args.wlist ? args.wlist : args.w), 'utf-8'); 
+    const passwords: string = fs.readFileSync(String(args.wlist ? args.wlist : args.wl), 'utf-8'); 
     let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
 
     let worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, url.protocol === 'https:' ? true : false));
