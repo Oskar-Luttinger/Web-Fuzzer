@@ -1,5 +1,5 @@
 // Banners
-const banner = `
+export const banner = `
 
 ░▒▓███████▓▒░       ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓███████▓▒░    ░▒▓█▓▒░░▒▓█▓▒░ 
 ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░   ░▒▓█▓▒░░▒▓█▓▒░ 
@@ -11,7 +11,7 @@ const banner = `
                                                                    
 `
 
-const sub_banner = `
+export const sub_banner = `
 
 ░█▀█░█▀▄░█▀▀░░░█░█░█▀█░█░█░░░█▀▄░█▀▀░█▀█░█▀▄░░░█░█░█▀▀░▀█▀░▀▀█
 ░█▀█░█▀▄░█▀▀░░░░█░░█░█░█░█░░░█░█░█▀▀░█▀█░█░█░░░░█░░█▀▀░░█░░░▀░
@@ -19,7 +19,9 @@ const sub_banner = `
 
 `
 
-const helpmsg = `
+
+
+export const helpmsg = `
 
     /‾‾\    
     |  |    
@@ -30,54 +32,63 @@ const helpmsg = `
     \\___/   
       /\\    
     /‾  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\\  
-    | It looks like you are trying to fuzz something |  
-    | Would you like some help with that?            |  
+    | It looks like you are trying to break something |  
+    | Would you like some help with that?             |  
     \\________________________________________________/  
 
+================================================================================
+ RUDY | basic HTTP Fuzzer & Crawler
+================================================================================
+
 Usage: 
+  rudy -u=<url> -m=<mode> -p=<payload>=[OPTIONS] (-wl<path> | (-pl<path> -ul<path>)
 
-bsender [-u=<url> | --url=<url>]* [-m=<sniper, ram, spyder> | --mode=<sniper, ram, spyder>]* 
-[-p=<path to payload> | --payload<path to payload>]* [-ul=<path to username wordlist> | --userlist=<path to username wordlist>] 
-[-pl=<path to password wordlist> | --passlist<path to password wordlist>] [-wl=<path wordlist> | --wordlist=<path wordlist>]
-[-w=<number of workers> | --workers=<number of workers>]
-[-o=<path to output> | --output=<path to output>] [-d=<ms> | --delay=<ms>]
-[-h  | --help] [-s | --stealth] [-v | --verbose]
-[-j | --jitter]
+Required Arguments:
+  -u, --url=<url>           Target URL and port (e.g., http://test.com:80)
+  -m, --mode=<mode>          Attack mode: [sniper | ram | spyder]
+  -p, --payload=<path>       Path to the raw HTTP payload file to inject into
+  -ul, --userlist=<path> *   Path to username wordlist, * if using ram mode 
+  -pl, --passlist=<path> *   Path to password wordlist, * if using ram mode
+  -wl, --wordlist=<path> *   Path to wordlist, * if using sniper mode
 
-Description of arguments and values:
+Mode Definitions:
+  sniper                     Fuzzes a single parameter using a wordlist.
+  ram                        Nested attack: iterates --passlist for every 
+                             entry in --userlist.
+  spyder                     Recursively crawls the target domain to map 
+                             endpoints.
 
---url (*) = url AND port to send payload to. Ex: http://test.com:80
+Wordlists & Inputs:
+  -wl, --wordlist <path>     [SNIPER] Path to wordlist for single-parameter 
+                             fuzzing.
+  -ul, --userlist <path>     [RAM] Path to username wordlist.
+  -pl, --passlist <path>     [RAM/SNIPER] Path to password wordlist.
 
---payload (*) = path to raw http payload to inject into 
+Execution Control:
+  -w, --workers <num>        Number of concurrent workers, in ram mode: 
 
---userlist = APPLIES TO RAM MODE: path to list of usernames to use in the attack. Ex: C:\\Users\\Attacker\\user-list.txt. 
+                             DON'T USE MORE THAN THE AMOUNT OF USERNAMES IN THE USERLIST
+                             Applies to: SNIPER, RAM.
+  -d, --delay <ms>           Sets a delay (ms) between requests per worker.
+  -j, --jitter               Adds random intervals (delay to delay * 8) to 
+                             disrupt patterns. Requires --delay.
+  -s, --stealth              Limits fuzzer to 1 request/second to reduce noise. Can be used in conjuction with jitter
+  -o, --output <path>        Path to save results as a CSV file.
+                             Applies to: SNIPER, RAM.
 
---passlist = APPLIES TO RAM MODE | SNIPER MODE: path to list of passwords to use in the attack
+Miscellaneous:
+  -v, --verbose              Increase output detail (verbosity).
+  -h, --help                 Display this help message.
 
---wordlist = APPLIES TO SNIPER MODE: path to list of words to inject into the payload
+--------------------------------------------------------------------------------
+   Note on Stealth: 
+   High worker counts with long delays still create "burst" patterns. 
+   Use --stealth or low worker counts for sensitive targets.
+================================================================================
 
---workers = number of concurrent workers to run. Recommended: 20
-
---output = path to write the output csv file to.
-
---delay = sets a delay between each request in every worker. Note: All workers will still send their request at 
-          the same time so it is not stealthy to have a long sleep but a high amount of workers.
-
---mode (*) = sets attack mode:
-            <sniper> = Fuzzes one parameter
-            <ram> = fuzzes two parameters. For every word in the userlist it will try every word in the pass list 
-            <spyder> = crawl the target domain recursively
-
-            <help> = displays this message
-
---stealth = sets the fuzzer to send only one request / second to reduce noise.
-
---jitter = REQUIRES THE SLEEP ARGUMENT: adds random intervals between sleep and sleep * 8 for each request to disrupt patterns. 
-
---verbose = increases the verbosity of the program i.e how much info it prints.
 `
 
-const ram_banner = `
+export const ram_banner = `
 
 ⠀⠀⠀⠀⠀⠀⠀⠠⠴⠶⠾⠿⠿⠿⢶⣦⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⢿⣿⣆⠐⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -96,7 +107,7 @@ const ram_banner = `
 
 `
 
-const sniper_banner = `
+export const sniper_banner = `
 
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣶⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⣤⡤⣤⠤⣾⣿⣽⣿⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -107,7 +118,7 @@ const sniper_banner = `
 
 `
 
-const spyder_banner = `
+export const spyder_banner = `
 
 ⠀⠀⢀⡟⢀⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣧⠈⣧⠀⠀
 ⠀⠀⣼⠀⣼⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⡆⢸⡆⠀
@@ -123,11 +134,3 @@ const spyder_banner = `
 ⠀⠀⠀⠁⠀⠀⠀⠈⢇⠀⠀⠀⠀⡞⠀⠀⠀⠀⠁⠀⠀
 
 `
-
-
-console.log(banner)
-console.log(sub_banner)
-console.log(helpmsg)
-console.log(ram_banner)
-console.log(sniper_banner)
-console.log(spyder_banner)
