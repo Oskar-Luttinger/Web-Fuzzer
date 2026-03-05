@@ -170,10 +170,16 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
         while (wlist !== undefined && wlist.length > 0) {
             let current_keyword = wlist.shift()
             let payload = change_cl(inject(content, current_keyword!))
+            if (verbose) {
+                console.log(`Testing: ${current_keyword}`)
+            }
             let result = await snr(url, payload, use_crypt)
             let content_length = Number(parse_content(result))
             let status_code = parse_status(result)
             result_table.push([current_keyword, content_length, status_code])
+            if (verbose) {
+                console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
+            }
             await sleep(jitter ? get_jitter(delay) : delay)
             }
         return result_table
@@ -194,10 +200,16 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
             for(let i = 0; i < passlist.length; i += 1) {
                 let current_password = passlist[i]
                 const payload_acc = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
+                if (verbose) {
+                    console.log(`Testing: ${current_username} : ${current_password}`)
+                }
                 let result = await snr(url, payload_acc, use_crypt)
                 let content_length = Number(parse_content(result))
                 let status_code = parse_status(result)
                 result_table.push([current_username, current_password, content_length, status_code])
+                if (verbose) {
+                    console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
+                }
                 await sleep(jitter ? get_jitter(delay) : delay)
                 }
             }  
@@ -371,6 +383,8 @@ async function main(): Promise<void> {
     } else if (mode === 'spyder') {
         console.log(spyder_banner)
         await spyder()
+    } else {
+        print_error('Missing argument --mode=')
     }
 }
 
