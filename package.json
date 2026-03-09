@@ -1,0 +1,26 @@
+{
+  "name": "web-fuzzer",
+  "version": "1.0.0",
+  "description": "node.js - The webserver is based on node js thus libraries that are commonly used like\r express, path and session has been used",
+  "main": "banners.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Oskar-Luttinger/Web-Fuzzer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Oskar-Luttinger/Web-Fuzzer/issues"
+  },
+  "homepage": "https://github.com/Oskar-Luttinger/Web-Fuzzer#readme",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6"
+  }
+}
