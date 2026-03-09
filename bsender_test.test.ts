@@ -21,9 +21,9 @@ function pass_chunk<T>(arr: T[], workers: number): T[][] {
     return result;
 }
 test("pass_chunk which divides an array between workers", () => {
-    const arr = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27]
-    const result = pass_chunk(arr, 7)
-    expect(result).toEqual([[ 1, 2, 3, 4 ], [ 4, 5, 6, 7 ], [ 7, 8, 9, 10 ], [ 10, 11, 12, 13 ], [ 13, 14, 15, 16 ], [ 16, 17, 18, 19 ], [ 19, 20, 21 ]])
+    const arr = [1, 2, 1234, 12345, 1234567]
+    const result = pass_chunk(arr, 3)
+    expect(result).toEqual([[1, 2], [1234, 12345], [1234567]])
 });
 
 
