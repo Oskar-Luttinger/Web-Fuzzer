@@ -7,7 +7,7 @@ import { parse_args, parse_content, parse_status, change_cl, get_body, get_url }
 import * as tls from "tls"
 import * as path from 'path'
 import { banner, sub_banner, spyder_banner, sniper_banner, ram_banner, helpmsg } from "./banners";
-import { error } from "console";
+
 
 ////////////////////
 // HELPER FUNCTIONS
@@ -418,84 +418,88 @@ function save_page(url: URL, content: string) {
 ///////////////
 // MAIN
 ///////////////
+function main() {
+    console.log(banner)
 
-console.log(banner)
-
-// Parse args and assign options to constants / variables
-const args = parse_args()
-let verbose: boolean = false
-if (args.help || args.h) {
-    console.log(sub_banner)
-    console.log(helpmsg)
-    process.exit(0)
-} else {}
-
-if (args.v || args.verbose) {
-    verbose = true
-} else {}
-
-const raw_url = args.u ?? args.url
-if (!raw_url) {
-    print_error('Missing argument --url=')
-} else {}
-const url = new URL(String(args.url ?? args.u))
-
-let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
-let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
-let jitter: boolean = false
-
-if (verbose) {
-    console.log(sub_banner)
-} else {}
-
-if (args.s || args.stealth) {
-    delay = 1000
-    number_of_workers = 1
-} else {}
-
-if (args.j || args.jitter) {
-    if (delay === 0) {
-        print_error('Jitter (-j) argument can only be used in conjunction with delay (-d) argument!')
+    // Parse args and assign options to constants / variables
+    const args = parse_args()
+    let verbose: boolean = false
+    if (args.help || args.h) {
+        console.log(sub_banner)
+        console.log(helpmsg)
+        process.exit(0)
     } else {}
-    jitter = true
-} else {}
 
-// Set attack mode and run attack
-let result:  PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[];
-const mode = args.m ? args.m : args.mode
+    if (args.v || args.verbose) {
+        verbose = true
+    } else {}
 
-let content : string
+    const raw_url = args.u ?? args.url
+    if (!raw_url) {
+        print_error('Missing argument --url=')
+    } else {}
+    const url = new URL(String(args.url ?? args.u))
 
-/**
- * main - main function, chooses attackmode and saves result from attack to csv, 
- * only reason this is a function is in order to use await command.
- */
-async function main(): Promise<void> {
-    if (mode === 'sniper') {
-        if (!(args.p || args.path)){
-            print_error('Missing required argument --payload=')
+    let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
+    let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
+    let jitter: boolean = false
+
+    if (verbose) {
+        console.log(sub_banner)
+    } else {}
+
+    if (args.s || args.stealth) {
+        delay = 1000
+        number_of_workers = 1
+    } else {}
+
+    if (args.j || args.jitter) {
+        if (delay === 0) {
+            print_error('Jitter (-j) argument can only be used in conjunction with delay (-d) argument!')
         } else {}
-        console.log(sniper_banner)
-        content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
-        result = await sniper()
-        save_to_csv(result)
-    } else if (mode === 'ram') {
-        if (!(args.p || args.path)){
-            print_error('Missing required argument --payload=')
-        } else {}
-        console.log(ram_banner)
-        content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
-        result = await ram()
-        save_to_csv(result)
-    } else if (mode === 'spyder') {
-        console.log(spyder_banner)
-        await spyder()
-    } else {
-        print_error('Missing argument --mode=')
+        jitter = true
+    } else {}
+
+    // Set attack mode and run attack
+    let result:  PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[];
+    const mode = args.m ? args.m : args.mode
+
+    let content : string
+
+    /**
+     * main - main function, chooses attackmode and saves result from attack to csv, 
+     * only reason this is a function is in order to use await command.
+     */
+    async function run_attack(): Promise<void> {
+        if (mode === 'sniper') {
+            if (!(args.p || args.path)){
+                print_error('Missing required argument --payload=')
+            } else {}
+            console.log(sniper_banner)
+            content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
+            result = await sniper()
+            save_to_csv(result)
+        } else if (mode === 'ram') {
+            if (!(args.p || args.path)){
+                print_error('Missing required argument --payload=')
+            } else {}
+            console.log(ram_banner)
+            content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
+            result = await ram()
+            save_to_csv(result)
+        } else if (mode === 'spyder') {
+            console.log(spyder_banner)
+            await spyder()
+        } else {
+            print_error('Missing argument --mode=')
+        }
     }
+    run_attack()
 }
 
-main()
+if (require.main === module) {
+    main();
+}
 
 
 
