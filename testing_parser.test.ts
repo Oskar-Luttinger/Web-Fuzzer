@@ -15,7 +15,7 @@ test("parse_args parses flags and key=value", () => {
 
 test("parse_content extracts content-length", () => {
   const header = "Content-Length: 123";
-  expect(parse_content(header)).toBe("123");
+  expect(parse_content(header)).toBe(123);
 });
 
 test("parse_content returns null if missing", () => {

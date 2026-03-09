@@ -23,7 +23,7 @@ import { error } from "console";
  * @returns string where fuzzmarker is replaced by a keyword
  */
 
-function inject(request : string, keyword: string, fuzzmarker?: string): string {
+export function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
         fuzzmarker = 'FUZZ'
     } else {}
@@ -39,7 +39,7 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
  * @returns Promise
  */
 
-function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms) );
 }
 /**
@@ -48,7 +48,7 @@ function sleep(ms: number): Promise<void> {
  * @param base_sleep 
  * @returns number between base sleep and base sleep * 8
  */
-function get_jitter(base_sleep: number): number {
+export function get_jitter(base_sleep: number): number {
     const min = base_sleep;
     const max = base_sleep * 8;
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -73,7 +73,7 @@ function print_error(error: string) {
  * @returns A table where each row is a section of arr 
  */
 
-function pass_chunk<T>(arr: T[], workers: number): T[][] {
+export function pass_chunk<T>(arr: T[], workers: number): T[][] {
     const n = arr.length
     const base_size = Math.floor(n / workers)
     const remainder = n % workers
