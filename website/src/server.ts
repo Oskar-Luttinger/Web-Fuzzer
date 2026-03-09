@@ -3,7 +3,7 @@ import path from 'path';
 import session from 'express-session';
 import pool from './db/db';
 
-const app = express();
+export const app = express();
 const PORT = 3000;
 
 /* Session Storage
@@ -86,7 +86,9 @@ app.post('/login', async (req, res) => {
 /* Server
 * Starts the server
 */
-app.listen(PORT, '127.0.0.1', () => {
-    console.log(`Server is running!`);
-    console.log(`Access the site at: http://127.0.0.1:${PORT}/`);
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, '127.0.0.1', () => {
+        console.log(`Server is running!`);
+        console.log(`Access the site at: http://127.0.0.1:${PORT}/`);
 });
+}
