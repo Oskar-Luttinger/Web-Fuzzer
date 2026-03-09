@@ -12,36 +12,48 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.app = void 0;
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const express_session_1 = __importDefault(require("express-session"));
 const db_1 = __importDefault(require("./db/db"));
-const app = (0, express_1.default)();
+exports.app = (0, express_1.default)();
 const PORT = 3000;
 /* Session Storage
 * creates a session object on the server (info about who is using the server)
 * maps it to a ID stored with cookies
 */
-app.use((0, express_session_1.default)({
+exports.app.use((0, express_session_1.default)({
     secret: "key",
     resave: false,
     saveUninitialized: false,
     cookie: { secure: false }
 }));
-app.use(express_1.default.json());
-app.use('/images', express_1.default.static(path_1.default.join(__dirname, '../images')));
-app.use(express_1.default.static(path_1.default.join(__dirname, '../public')));
-app.use('/scripts', express_1.default.static(path_1.default.join(__dirname, '.')));
-/* Authorization check
-* If the user is logged in, the user can proceed to the requested page
-* If the user is not logged in, the user will get an unauthorized error message
+exports.app.use(express_1.default.json());
+exports.app.use('/images', express_1.default.static(path_1.default.join(__dirname, '../images')));
+exports.app.use(express_1.default.static(path_1.default.join(__dirname, '../public')));
+exports.app.use('/scripts', express_1.default.static(path_1.default.join(__dirname, '.')));
+/*
+* Verifies if a user session is active
+* @param {Request} req - The incoming request
+* @param {Response} res - The outgoing response
+* @param {NextFunction} - Triggers the next part of the chain
+* @returns {void}
 */
-const requireAuth = (req, res, next) => {
-    if (req.session.isLoggedIn) {
+const require_auth = (req, res, next) => {
+    if (req.session.is_logged_in) {
         return next();
     }
     else {
         res.status(401).json({ succes: false, message: "unauthorized" });
+    }
+};
+const require_admin = (req, res, next) => {
+    if (req.session.is_logged_in && req.session.is_admin) {
+        return next();
+    }
+    else {
+        res.status(403).json({ success: false, message: "Not logged in" });
     }
 };
 /* Protected website routing
@@ -49,44 +61,87 @@ const requireAuth = (req, res, next) => {
 * Checks if the user has a valid session
 * If the user does it sends the protected file
 */
-app.get("/dashboard", requireAuth, (req, res) => {
+exports.app.get("/dashboard", require_auth, (req, res) => {
     res.sendFile(path_1.default.join(__dirname, "../private/website.html"));
 });
-app.get("/user.html", requireAuth, (req, res) => {
+exports.app.get("/admin", require_auth, (req, res) => {
+    res.sendFile(path_1.default.join(__dirname, "../private/admin.html"));
+});
+exports.app.get("/secret", require_admin, (req, res) => {
+    res.sendFile(path_1.default.join(__dirname, "../private/secret.html"));
+});
+exports.app.get("/user.html", require_auth, (req, res) => {
     res.sendFile(path_1.default.join(__dirname, "../private/user.html"));
 });
-/* Login/Authentication controller
-* To lazy to comment rn
+/*
+* Validates if the user credentials against the database and intializes the user session
+* @example
+* app.post("/login", login_request);
+* //response on success
+* { "success": true, "message": "Success, logged in" }
+* @param {Request} req - the incomming login data
+* @param {Response} res - outgoing login data
+* @precondition The database connection pool must be intialized
+* @complexity O(1) lookup
+* @returns {Promise<void>}
 */
-app.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { user, pass } = req.body;
-    console.log(`Login attempt for user: ${user}`);
-    try {
-        const [rows] = yield db_1.default.execute(`SELECT * FROM users WHERE username = '${user}' AND password = '${pass}'`, [user, pass]);
-        if (rows.length > 0) {
-            const dbUser = rows[0];
-            req.session.isLoggedIn = true;
-            req.session.username = dbUser.username;
-            req.session.save((err) => {
-                if (err) {
-                    return res.status(500).json({ success: false, message: 'Session error' });
-                }
-                res.status(200).json({ success: true, message: 'Success, logged in' });
-            });
+function login_request(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        const { user, pass } = req.body;
+        console.log(`Login attempt for user: ${user}`);
+        const isFromAdminPage = (_a = req.get('Referer')) === null || _a === void 0 ? void 0 : _a.includes('/admin');
+        if (user === 'admin') {
+            if (isFromAdminPage && pass === '1234') {
+                req.session.is_logged_in = true;
+                req.session.is_admin = true;
+                req.session.save(() => {
+                    // Send back the "different website" URL
+                    res.status(200).json({
+                        success: true,
+                        message: 'Admin logged in',
+                        redirectUrl: '/secret'
+                    });
+                });
+                return;
+            }
+            else {
+                res.status(404).json({ success: false, message: 'Invalid for this page' });
+            }
+            return;
         }
-        else {
-            res.status(401).json({ success: false, message: 'Invalid username or password.' });
+        try {
+            const [rows] = yield db_1.default.execute(`SELECT * FROM users WHERE username = '${user}' AND password = '${pass}'`, [user, pass]);
+            if (rows.length > 0) {
+                const dbUser = rows[0];
+                req.session.is_logged_in = true;
+                req.session.username = dbUser.username;
+                req.session.save((err) => {
+                    if (err) {
+                        return res.status(500).json({ success: false, message: 'Session error' });
+                    }
+                    else { }
+                    res.status(200).json({ success: true, message: 'Success, logged in' });
+                });
+            }
+            else {
+                res.status(401).json({ success: false, message: 'Invalid username or password.' });
+            }
         }
-    }
-    catch (error) {
-        console.error("Database error: error");
-        res.status(500).json({ success: false, message: "Internal server error" });
-    }
-}));
+        catch (error) {
+            console.error("Database error: error");
+            res.status(500).json({ success: false, message: "Internal server error" });
+        }
+    });
+}
+exports.app.post('/login', login_request);
 /* Server
 * Starts the server
 */
-app.listen(PORT, '127.0.0.1', () => {
-    console.log(`Server is running!`);
-    console.log(`Access the site at: http://127.0.0.1:${PORT}/`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    exports.app.listen(PORT, '127.0.0.1', () => {
+        console.log(`Server is running!`);
+        console.log(`Access the site at: http://127.0.0.1:${PORT}/`);
+    });
+}
+else { }

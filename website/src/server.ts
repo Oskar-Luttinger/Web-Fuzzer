@@ -37,6 +37,14 @@ const require_auth = (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
+const require_admin = (req: Request, res: Response, next: NextFunction) => {
+    if(req.session.is_logged_in && req.session.is_admin) {
+        return next();
+    } else {
+        res.status(403).json({ success: false, message: "Not logged in"});
+    }
+};
+
 /* Protected website routing
 * Gets the URL request
 * Checks if the user has a valid session 
@@ -46,24 +54,55 @@ app.get("/dashboard", require_auth, (req, res) => {
     res.sendFile(path.join(__dirname, "../private/website.html"));
 });
 
+app.get("/admin", require_auth, (req, res) => {
+    res.sendFile(path.join(__dirname, "../private/admin.html"));
+});
+
+app.get("/secret", require_admin, (req, res) => {
+    res.sendFile(path.join(__dirname, "../private/secret.html"));
+});
+
 app.get("/user.html", require_auth, (req, res) => {
     res.sendFile(path.join(__dirname, "../private/user.html"));
 });
 
-/* 
+/*
 * Validates if the user credentials against the database and intializes the user session
 * @example 
-* POST /login {"user", "admin", "pass", "1234"}
+* app.post("/login", login_request);
+* //response on success
+* { "success": true, "message": "Success, logged in" }
 * @param {Request} req - the incomming login data
 * @param {Response} res - outgoing login data
 * @precondition The database connection pool must be intialized
 * @complexity O(1) lookup
 * @returns {Promise<void>}
 */ 
-app.post('/login', async (req: Request, res: Response): Promise<void> => {
+async function login_request(req: Request, res: Response): Promise<void> {
     const { user, pass } = req.body;    
-
+    
     console.log(`Login attempt for user: ${user}`);
+    const isFromAdminPage = req.get('Referer')?.includes('/admin');
+    if (user === 'admin') {
+    if (isFromAdminPage && pass === '1234') {
+        req.session.is_logged_in = true;
+        req.session.is_admin = true;
+
+        req.session.save(() => {
+            // Send back the "different website" URL
+            res.status(200).json({ 
+                success: true, 
+                message: 'Admin logged in',
+                redirectUrl: '/secret' 
+            });
+        });
+        return;
+    } else {
+        res.status(404).json({ success: false, message: 'Invalid for this page' });
+    }
+    return;
+}
+ 
     try {
         const[rows]: any = await pool.execute(
             `SELECT * FROM users WHERE username = '${user}' AND password = '${pass}'`,
@@ -91,8 +130,8 @@ app.post('/login', async (req: Request, res: Response): Promise<void> => {
         console.error("Database error: error");
         res.status(500).json({success: false, message: "Internal server error"});
     }    
-});
-
+}
+app.post('/login', login_request);
 /* Server
 * Starts the server
 */

@@ -40,9 +40,13 @@ async function login_handler(): Promise<void> {
 
         if (data.success) {
          setTimeout(() => {
-            window.location.href = "../dashboard";
+            if(data.redirectUrl)  {
+                window.location.href = data.redirectUrl;
+            } else {
+                window.location.href = "../dashboard";
+            }
          }, 1000);
-        } else {}
+        }
 
     } catch (error) {
         console.error("Connection failed:", error);
