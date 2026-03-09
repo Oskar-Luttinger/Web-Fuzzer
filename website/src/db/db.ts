@@ -30,8 +30,13 @@ async function initialize_database(): Promise<void> {
         `);
         
         await connection.query(`
+        ALTER TABLE users 
+        MODIFY password VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL
+        `);
+
+        await connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('theArchitect', 'lunA4RCH1teCT')
+            VALUES ('theArchitect', 'lUna4rch1teCt')
             ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
 
