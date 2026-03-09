@@ -3,14 +3,14 @@ export function parse_args(): Record<string, string | boolean> {
     const result: Record<string, string | boolean> = {};
 
     for (const arg of args) {
-        if (!arg.includes('=')) {
-            result[arg.slice(1)] = true;
-        } else if (arg.startsWith('--')){
+        if (arg.startsWith('--')){
         const [key, value] = arg.slice(2).split("=");
         result[key] = value ?? true;
         } else if (arg.startsWith('-')){
             const [key, value] = arg.slice(1).split("=");
             result[key] = value ?? true;
+        } else if (!arg.includes('=')) {
+            result[arg.slice(1)] = true;
         }
     }
 

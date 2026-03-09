@@ -334,11 +334,6 @@ if (args.v || args.verbose) {
     verbose = true
 }
 
-let content : string
-if (!(args.p || args.path)){
-    print_error('Missing required argument --payload=')
-} 
-
 const raw_url = args.u ?? args.url
 if (!raw_url) {
     print_error('Missing argument --url=')
@@ -369,13 +364,21 @@ if (args.j || args.jitter) {
 let result:  PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[];
 const mode = args.m ? args.m : args.mode
 
+let content : string
+
 async function main(): Promise<void> {
     if (mode === 'sniper') {
+        if (!(args.p || args.path)){
+            print_error('Missing required argument --payload=')
+        } 
         console.log(sniper_banner)
         content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
         result = await sniper()
         save_to_csv(result)
     } else if (mode === 'ram') {
+        if (!(args.p || args.path)){
+            print_error('Missing required argument --payload=')
+        } 
         console.log(ram_banner)
         content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
         result = await ram()

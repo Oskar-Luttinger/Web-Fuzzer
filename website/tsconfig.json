@@ -5,9 +5,7 @@
     "target": "ES6",
     "module": "CommonJS",
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "types": ["node", "jest"]
+    "skipLibCheck": true
   },
-  "include": ["src/**/*",
-  "./auth.test.ts"]
+  "include": ["src/**/*"]
 }
