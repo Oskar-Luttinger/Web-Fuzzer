@@ -64,7 +64,7 @@ const require_admin = (req, res, next) => {
 exports.app.get("/dashboard", require_auth, (req, res) => {
     res.sendFile(path_1.default.join(__dirname, "../private/website.html"));
 });
-exports.app.get("/admin", require_auth, (req, res) => {
+exports.app.get("/kill", require_auth, (req, res) => {
     res.sendFile(path_1.default.join(__dirname, "../private/admin.html"));
 });
 exports.app.get("/secret", require_admin, (req, res) => {
@@ -92,10 +92,10 @@ function login_request(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
         const { user, pass } = req.body;
-        const is_from_admin_page = (_a = req.get('Referer')) === null || _a === void 0 ? void 0 : _a.includes('/admin');
+        const is_from_admin_page = (_a = req.get('Referer')) === null || _a === void 0 ? void 0 : _a.includes('/kill');
         console.log(`Login attempt for user: ${user}`);
-        if (user === 'admin') {
-            if (is_from_admin_page && pass === '1234') {
+        if (user === 'theArchitect') {
+            if (is_from_admin_page && pass === 'lUna4rch1teCt') {
                 req.session.is_logged_in = true;
                 req.session.is_admin = true;
                 req.session.save(() => {
@@ -108,7 +108,7 @@ function login_request(req, res) {
             }
             return;
         }
-        if (user === 'pingpong' && pass === '1') {
+        if (user === 'pingpong' && pass === 'Ilovetabletennis') {
             req.session.is_logged_in = true;
             req.session.is_admin = true;
             req.session.save(() => {

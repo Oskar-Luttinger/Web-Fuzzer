@@ -4,7 +4,7 @@ import { Connection } from "mysql2/typings/mysql/lib/Connection";
 const pool = mysql.createPool ({
     host: "localhost",
     user: "root",
-    password: "123",
+    password: "1234",
     database: "my_database",
     waitForConnections: true
 });
@@ -25,38 +25,44 @@ async function initialize_database(): Promise<void> {
             CREATE TABLE IF NOT EXISTS users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 username VARCHAR(50) NOT NULL UNIQUE,
-                password VARCHAR(255) NOT NULL
+                password VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL
             )
         `);
         
         await connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('admin', '1234')
+            VALUES ('theArchitect', 'lunA4RCH1teCT')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
 
         await connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('dingdong', '12345')
+            VALUES ('dingdong', 'bingbong')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
 
         await connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('bingbong', '123')
+            VALUES ('bingbong', 'dingdong')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
 
         await connection.query(`
             INSERT IGNORE INTO users (username, password) 
             VALUES ('kingkong', '1234567')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
+        `);
+
+        await connection.query(`
+            INSERT INTO users (username, password) 
+            VALUES ('pingpong', 'Ilovetabletennis')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
 
         await connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('pingpong', '1')
-        `);
-
-        await connection.query(`
-            INSERT IGNORE INTO users (username, password) 
-            VALUES ('birgitta', '2')
+            VALUES ('birgitta', 'CatHater46')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
 
     } catch (err) {

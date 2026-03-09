@@ -1,6 +1,6 @@
 POST /login HTTP/1.1
 Host: 127.0.0.1:3000
-Content-Length: 29
+Content-Length: 37
 sec-ch-ua-platform: "Windows"
 Accept-Language: en-GB,en;q=0.9
 sec-ch-ua: "Chromium";v="145", "Not:A-Brand";v="99"
@@ -12,8 +12,9 @@ Origin: http://127.0.0.1:3000
 Sec-Fetch-Site: same-origin
 Sec-Fetch-Mode: cors
 Sec-Fetch-Dest: empty
-Referer: http://127.0.0.1:3000/
+Referer: http://127.0.0.1:3000/kill
 Accept-Encoding: gzip, deflate, br
+Cookie: connect.sid=s%3AU0zAmf-hM4azccCzYHcuYT6pOSDmtd0X.g%2FaSW%2Fy%2F5l%2BzLmD3eiNrWRPqX805ru4x3t3zRKGGSCk
 Connection: keep-alive
 
-{"user":"birgitta","pass":"FUZZ"}
+{"user":"theArchitect","pass":"FUZZ"}

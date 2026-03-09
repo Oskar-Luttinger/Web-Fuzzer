@@ -60,7 +60,7 @@ app.get("/dashboard", require_auth, (req, res) => {
     res.sendFile(path.join(__dirname, "../private/website.html"));
 });
 
-app.get("/admin", require_auth, (req, res) => {
+app.get("/kill", require_auth, (req, res) => {
     res.sendFile(path.join(__dirname, "../private/admin.html"));
 });
 
@@ -90,11 +90,11 @@ app.get("/communication", require_admin, (req, res) => {
 */ 
 async function login_request(req: Request, res: Response): Promise<void> {
     const { user, pass } = req.body;    
-    const is_from_admin_page = req.get('Referer')?.includes('/admin');
+    const is_from_admin_page = req.get('Referer')?.includes('/kill');
     console.log(`Login attempt for user: ${user}`);
 
-    if (user === 'admin') {
-        if (is_from_admin_page && pass === '1234') {
+    if (user === 'theArchitect') {
+        if (is_from_admin_page && pass === 'lUna4rch1teCt') {
             req.session.is_logged_in = true;
             req.session.is_admin = true;
 
@@ -107,8 +107,8 @@ async function login_request(req: Request, res: Response): Promise<void> {
     }
     return;
 }
-    if (user === 'pingpong' && pass === '1') {
-            req.session.is_logged_in = true;
+    if (user === 'pingpong' && pass === 'Ilovetabletennis') {
+            req.session.is_logged_in = true; 
             req.session.is_admin = true;
             
             req.session.save(() => {

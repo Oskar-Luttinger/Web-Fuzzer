@@ -16,7 +16,7 @@ const promise_1 = __importDefault(require("mysql2/promise"));
 const pool = promise_1.default.createPool({
     host: "localhost",
     user: "root",
-    password: "123",
+    password: "1234",
     database: "my_database",
     waitForConnections: true
 });
@@ -43,27 +43,33 @@ function initialize_database() {
         `);
             yield connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('admin', '1234')
+            VALUES ('theArchitect', 'lunA4RCH1teCT')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
             yield connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('dingdong', '12345')
+            VALUES ('dingdong', 'bingbong')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
             yield connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('bingbong', '123')
+            VALUES ('bingbong', 'dingdong')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
             yield connection.query(`
             INSERT IGNORE INTO users (username, password) 
             VALUES ('kingkong', '1234567')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
+        `);
+            yield connection.query(`
+            INSERT INTO users (username, password) 
+            VALUES ('pingpong', 'Ilovetabletennis')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
             yield connection.query(`
             INSERT IGNORE INTO users (username, password) 
-            VALUES ('pingpong', '1')
-        `);
-            yield connection.query(`
-            INSERT IGNORE INTO users (username, password) 
-            VALUES ('birgitta', '2')
+            VALUES ('birgitta', 'CatHater46')
+            ON DUPLICATE KEY UPDATE password = VALUES(password)
         `);
         }
         catch (err) {
