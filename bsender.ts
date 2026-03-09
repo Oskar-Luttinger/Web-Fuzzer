@@ -12,6 +12,16 @@ import { banner, sub_banner, spyder_banner, sniper_banner, ram_banner, helpmsg }
 // HELPER FUNCTIONS
 ////////////////////
 
+/**
+ * Inject - Replaces a fuzzmarker in a string with a keyword
+ * @example inject('this is a FUZZ text', short, FUZZ) will return 
+ *          'this is a short text'
+ * @param {string} request the request to inject the keyword into
+ * @param {string} keyword the keyword to inject
+ * @param {string} fuzzmarker a string inside the request to replace with the keyword
+ * @returns string where fuzzmarker is replaced by a keyword
+ */
+
 function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
         fuzzmarker = 'FUZZ'
@@ -21,21 +31,46 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
     return payload
 } 
 
+/**
+ * Sleep - pauses program execution for given amount of miliseconds by only
+ * resolving the promise after given time has passed
+ * @param {number} ms amount of milliseconds to wait for
+ * @returns Promise
+ */
+
 function sleep(ms: number) {
     return new Promise( resolve => setTimeout(resolve, ms) );
 }
-
-function get_jitter(baseSleep: number): number {
-    // Generate a random number between delay and delay * 8
-    const min = baseSleep;
-    const max = baseSleep * 8;
+/**
+ * get_jitter - returns a random number between base sleep ( delay global var)
+ * and base sleep * 8
+ * @param base_sleep 
+ * @returns number between base sleep and base sleep * 8
+ */
+function get_jitter(base_sleep: number): number {
+    const min = base_sleep;
+    const max = base_sleep * 8;
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+/**
+ * print_error - Prints out an error message and exits the program 
+ * @param error error string to print
+ */
 function print_error(error: string) {
     console.log(`ERROR: ${error}\n`)
     process.exit(1)
 }
+
+/**
+ * pass_chunk splits an array into a table where each row is a section
+ * of the original array
+ * @example pass_chunk([1, 2, 3, 4, 5, 6, 7, 8, 9], 3)
+ *          results in [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+ * @param arr array to split
+ * @param workers number of chunks / rows to split original array into
+ * @returns A table where each row is a section of arr 
+ */
 
 function pass_chunk<T>(arr: T[], workers: number): T[][] {
     const size = Math.ceil(arr.length / workers);
@@ -48,7 +83,11 @@ function pass_chunk<T>(arr: T[], workers: number): T[][] {
     return result;
 }
 
-
+/**
+ * save_to_csv saves result from a Promise.Allsettled call table to a csv file,
+ * @param {PromiseSettledResult} result A PromiseSettledResult eg. an array of records. 
+ * @returns void - But it saves result to a new csv file 'output.csv unless args.output is defined. 
+ */
 function save_to_csv(result: PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[]) {
     let file_path: string
     let output = args.o ? args.o : args.output
@@ -86,7 +125,13 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null | unde
 ////////////////////////
 // NETWORK FUNCTION
 ////////////////////////
-
+/**
+ * Snr - (send and recieve) sends a payload to the given url and resloves with the response or error
+ * @param {URL} url url to target
+ * @param {string} payload http payload to send
+ * @param {boolean} use_crypt tls option false for no tls true for tls
+ * @returns raw response http OR error message
+ */
 function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
     
     return new Promise((resolve, reject) => {
@@ -151,6 +196,11 @@ function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
 // SNIPER FUNCTIONS
 //////////////////////
 
+/**
+ * sniper - sniper attack mode main funciton, used to create workers and run them.
+ * @returns Result from running the worker functions in parallel
+ */
+
 async function sniper() {
     // Create worker array
     if (!(args.w || args.wlist)){
@@ -159,23 +209,34 @@ async function sniper() {
     const passwords: string = fs.readFileSync(String(args.wlist ? args.wlist : args.wl), 'utf-8'); 
     let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
 
+    // Create an array of function calls to sniper_worker where each worker gets a separete chunk from the wordlist to process
     let worker_promises = pass_chunk(wlist, number_of_workers).map(chunk => sniper_worker(content, chunk, url, url.protocol === 'https:' ? true : false));
     let result = await Promise.allSettled(worker_promises)
     return result
 }
 
+/**
+ * sniper_worker - worker function for sniper attack mode, 
+ * for every word in the wordlist it injects it into the payload, sends the payload, returns a table where each row contains 
+ * [keyword, content lenght, status code] for each request sent.
+ * @param {string} content the original captured payload
+ * @param {Array} wlist the wordlist to inject from
+ * @param {URL} url the url to the target site
+ * @param {boolean} use_crypt tls options, true for use tls else false.
+ * @returns a table of results from each sent message
+ */
 async function sniper_worker(content: string, wlist: Array<string>, url: URL, use_crypt: boolean) {
     try {    
-        let result_table = []
+        let result_table: Array<string|number|null>[] = []
         while (wlist !== undefined && wlist.length > 0) {
-            let current_keyword = wlist.shift()
+            let current_keyword: string = wlist.shift()!
             let payload = change_cl(inject(content, current_keyword!))
             if (verbose) {
                 console.log(`Testing: ${current_keyword}`)
             }
             let result = await snr(url, payload, use_crypt)
-            let content_length = Number(parse_content(result))
-            let status_code = parse_status(result)
+            let content_length: number = parse_content(result)
+            let status_code: number|null = parse_status(result)
             result_table.push([current_keyword, content_length, status_code])
             if (verbose) {
                 console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
@@ -190,7 +251,17 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
 ////////////////////////
 // RAM FUNCTIONS
 ////////////////////////
-
+/**
+ * ram_worker - worker function for ram attack mode, this worker will for every word in the userlist, 
+ * for every word in the passlist send a request with both username and password paramteres injected on.
+ * @param {string} content original payload to inject into
+ * @param {Array} userlist list of usernames
+ * @param {Array} passlist list of passwords
+ * @param {URL} url url to target website
+ * @param {boolean} use_crypt tls option true for use tls false for no tls
+ * @complexity O(n*j) where n is length of userlist, j is length of passlist
+ * @returns table of results for each request where each row contains [username, password, content length, status code]
+ */
 async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
     try {    
         let result_table = []
@@ -204,12 +275,12 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
                     console.log(`Testing: ${current_username} : ${current_password}`)
                 }
                 let result = await snr(url, payload_acc, use_crypt)
-                let content_length = Number(parse_content(result))
+                let content_length = parse_content(result)
                 let status_code = parse_status(result)
                 result_table.push([current_username, current_password, content_length, status_code])
                 if (verbose) {
                     console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
-                }
+                } else {}
                 await sleep(jitter ? get_jitter(delay) : delay)
                 }
             }  
@@ -219,7 +290,10 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
     }
 }
 
-
+/**
+ * ram - ram attack mode main function, used to create workers and run them in parallel
+ * @returns {PromiseSettledResult} Result from running the worker functions in parallel 
+ */
 async function ram() {
     // Create worker array
     if (!(args.pl || args.passlist)){
@@ -236,7 +310,9 @@ async function ram() {
 
     let username_chunks = pass_chunk(usernames, number_of_workers)
     
-    const worker_promises = username_chunks.map((user_chunk, index) => {
+    // Create an array of function calls to ram_worker which will be an array of promises 
+    // used in the call to Promise.allSettled
+    const worker_promises = username_chunks.map((user_chunk) => {
         return ram_worker(content, user_chunk, passwords, url, url.protocol === 'https:' ? true : false);
     });
     let result = await Promise.allSettled(worker_promises)
@@ -247,8 +323,10 @@ async function ram() {
 //////////////////////
 // SPYDER FUNCTIONS
 /////////////////////
-
-async function spyder() {
+/** spyder - spyder main function used to create worker promises and run them in parallel
+ *  @returns void - saves all files the crawler finds in a download directory
+ */
+async function spyder(): Promise<void> {
     const queue: URL [] = [];
     const visited = new Set<string>();
     visited.add(url.href);
@@ -262,7 +340,12 @@ async function spyder() {
     console.log("Crawling finished");
 }
 
-
+/**
+ * spyder_worker - worker function for spyder attack mode 
+ * @param {URL} base_url url to the target website to crawl.
+ * @param {Set<string>} visited  a set of already visited endpoints
+ * @param {Array<URL>} queue an array of urls to visit
+ */
 async function spyder_worker(base_url: URL, visited: Set<string>, queue: Array<URL>) {
     while (true) {
         const current = queue.shift();
@@ -366,6 +449,10 @@ const mode = args.m ? args.m : args.mode
 
 let content : string
 
+/**
+ * main - main function, chooses attackmode and saves result from attack to csv, 
+ * only reason this is a function is in order to use await command.
+ */
 async function main(): Promise<void> {
     if (mode === 'sniper') {
         if (!(args.p || args.path)){
