@@ -23,7 +23,7 @@ import { banner, sub_banner, spyder_banner, sniper_banner, ram_banner, helpmsg }
  * @returns string where fuzzmarker is replaced by a keyword
  */
 
-export function inject(request : string, keyword: string, fuzzmarker?: string): string {
+function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
         fuzzmarker = 'FUZZ'
     } else {}
@@ -39,7 +39,7 @@ export function inject(request : string, keyword: string, fuzzmarker?: string): 
  * @returns Promise
  */
 
-export function sleep(ms: number): Promise<void> {
+function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms) );
 }
 /**
@@ -48,7 +48,7 @@ export function sleep(ms: number): Promise<void> {
  * @param base_sleep 
  * @returns number between base sleep and base sleep * 8
  */
-export function get_jitter(base_sleep: number): number {
+function get_jitter(base_sleep: number): number {
     const min = base_sleep;
     const max = base_sleep * 8;
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -73,7 +73,7 @@ function print_error(error: string) {
  * @returns A table where each row is a section of arr 
  */
 
-export function pass_chunk<T>(arr: T[], workers: number): T[][] {
+function pass_chunk<T>(arr: T[], workers: number): T[][] {
     const n = arr.length
     const base_size = Math.floor(n / workers)
     const remainder = n % workers
@@ -418,91 +418,70 @@ function save_page(url: URL, content: string) {
 ///////////////
 // MAIN
 ///////////////
-function main() {
-    console.log(banner)
-
-    // Parse args and assign options to constants / variables
-    const args = parse_args()
-    let verbose: boolean = false
-    if (args.help || args.h) {
-        console.log(sub_banner)
-        console.log(helpmsg)
-        process.exit(0)
+console.log(banner)
+// Parse args and assign options to constants / variables
+const args = parse_args()
+let verbose: boolean = false
+if (args.help || args.h) {
+    console.log(sub_banner)
+    console.log(helpmsg)
+    process.exit(0)
+} else {}
+if (args.v || args.verbose) {
+    verbose = true
+} else {}
+const raw_url = args.u ?? args.url
+if (!raw_url) {
+    print_error('Missing argument --url=')
+} else {}
+const url = new URL(String(args.url ?? args.u))
+let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
+let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
+let jitter: boolean = false
+if (verbose) {
+    console.log(sub_banner)
+} else {}
+if (args.s || args.stealth) {
+    delay = 1000
+    number_of_workers = 1
+} else {}
+if (args.j || args.jitter) {
+    if (delay === 0) {
+        print_error('Jitter (-j) argument can only be used in conjunction with delay (-d) argument!')
     } else {}
-
-    if (args.v || args.verbose) {
-        verbose = true
-    } else {}
-
-    const raw_url = args.u ?? args.url
-    if (!raw_url) {
-        print_error('Missing argument --url=')
-    } else {}
-    const url = new URL(String(args.url ?? args.u))
-
-    let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
-    let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
-    let jitter: boolean = false
-
-    if (verbose) {
-        console.log(sub_banner)
-    } else {}
-
-    if (args.s || args.stealth) {
-        delay = 1000
-        number_of_workers = 1
-    } else {}
-
-    if (args.j || args.jitter) {
-        if (delay === 0) {
-            print_error('Jitter (-j) argument can only be used in conjunction with delay (-d) argument!')
+    jitter = true
+} else {}
+// Set attack mode and run attack
+let result:  PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[];
+const mode = args.m ? args.m : args.mode
+let content : string
+/**
+ * main - main function, chooses attackmode and saves result from attack to csv, 
+ * only reason this is a function is in order to use await command.
+ */
+async function main(): Promise<void> {
+    if (mode === 'sniper') {
+        if (!(args.p || args.path)){
+            print_error('Missing required argument --payload=')
         } else {}
-        jitter = true
-    } else {}
-
-    // Set attack mode and run attack
-    let result:  PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[];
-    const mode = args.m ? args.m : args.mode
-
-    let content : string
-
-    /**
-     * main - main function, chooses attackmode and saves result from attack to csv, 
-     * only reason this is a function is in order to use await command.
-     */
-    async function run_attack(): Promise<void> {
-        if (mode === 'sniper') {
-            if (!(args.p || args.path)){
-                print_error('Missing required argument --payload=')
-            } else {}
-            console.log(sniper_banner)
-            content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
-            result = await sniper()
-            save_to_csv(result)
-        } else if (mode === 'ram') {
-            if (!(args.p || args.path)){
-                print_error('Missing required argument --payload=')
-            } else {}
-            console.log(ram_banner)
-            content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
-            result = await ram()
-            save_to_csv(result)
-        } else if (mode === 'spyder') {
-            console.log(spyder_banner)
-            await spyder()
-        } else {
-            print_error('Missing argument --mode=')
-        }
+        console.log(sniper_banner)
+        content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
+        result = await sniper()
+        save_to_csv(result)
+    } else if (mode === 'ram') {
+        if (!(args.p || args.path)){
+            print_error('Missing required argument --payload=')
+        } else {}
+        console.log(ram_banner)
+        content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
+        result = await ram()
+        save_to_csv(result)
+    } else if (mode === 'spyder') {
+        console.log(spyder_banner)
+        await spyder()
+    } else {
+        print_error('Missing argument --mode=')
     }
-    run_attack()
 }
 
-if (require.main === module) {
-    main();
-}
-
-
-
-
-
-
+main()
