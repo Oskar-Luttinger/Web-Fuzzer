@@ -35,7 +35,7 @@ test("change_cl updates content-length", () => {
 
   const result = change_cl(payload);
 
-  expect(result.includes("Content-length: 11")).toBe(true);
+  expect(result.includes("Content-Length: 11")).toBe(true);
 });
 
 

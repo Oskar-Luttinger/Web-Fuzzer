@@ -1,6 +1,5 @@
 {
   "devDependencies": {
-<<<<<<< HEAD
     "@types/jest": "^30.0.0",
     "jest": "^30.2.0",
     "ts-jest": "^29.4.6"
@@ -220,11 +219,4 @@
     "url": "https://github.com/Oskar-Luttinger/Web-Fuzzer/issues"
   },
   "homepage": "https://github.com/Oskar-Luttinger/Web-Fuzzer#readme"
-=======
-    "@types/node": "^25.3.5"
-  },
-  "dependencies": {
-    "typescript": "^5.9.3"
-  }
->>>>>>> ed1ddb8 (?)
 }

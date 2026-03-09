@@ -73,13 +73,20 @@ function print_error(error: string) {
  */
 
 function pass_chunk<T>(arr: T[], workers: number): T[][] {
-    const size = Math.ceil(arr.length / workers);
+    const n = arr.length
+    const base_size = Math.floor(n / workers)
+    const remainder = n % workers
     const result: T[][] = [];
 
+    let start = 0
     for (let i = 0; i < workers; i++) {
-        result.push(arr.slice(i * size, (i + 1) * size));
+        const size = base_size + (i < remainder ? 1 : 0)
+        const chunk = arr.slice(start, start + size)
+        if (chunk.length > 0) {
+            result.push(chunk)
+            start += base_size
+        }
     }
-
     return result;
 }
 
@@ -235,8 +242,8 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
                 console.log(`Testing: ${current_keyword}`)
             }
             let result = await snr(url, payload, use_crypt)
-            let content_length: number = parse_content(result)
-            let status_code: number|null = parse_status(result)
+            let content_length: number | null = parse_content(result)
+            let status_code: number | null = parse_status(result)
             result_table.push([current_keyword, content_length, status_code])
             if (verbose) {
                 console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
