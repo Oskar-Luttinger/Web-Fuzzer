@@ -3,7 +3,7 @@ import path from 'path';
 import session from 'express-session';
 import pool from './db/db';
 
-const app = express();
+export const app = express();
 const PORT = 3000;
 
 /* Session Storage
