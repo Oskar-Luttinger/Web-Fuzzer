@@ -2,7 +2,13 @@ import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import session from 'express-session';
 import pool from './db/db';
+import { RowDataPacket } from 'mysql2';
 
+interface User extends RowDataPacket {
+    username: string;
+    password: string | undefined;
+    id: number;
+}
 export const app = express();
 const PORT = 3000;
 
@@ -66,6 +72,10 @@ app.get("/user.html", require_auth, (req, res) => {
     res.sendFile(path.join(__dirname, "../private/user.html"));
 });
 
+app.get("/communication", require_admin, (req, res) => {
+    res.sendFile(path.join(__dirname, "../private/communication.html"));
+});
+
 /*
 * Validates if the user credentials against the database and intializes the user session
 * @example 
@@ -76,35 +86,40 @@ app.get("/user.html", require_auth, (req, res) => {
 * @param {Response} res - outgoing login data
 * @precondition The database connection pool must be intialized
 * @complexity O(1) lookup
-* @returns {Promise<void>}
+* @returns {Promise<void>} Returns a promise that resolves when a response is sent
 */ 
 async function login_request(req: Request, res: Response): Promise<void> {
     const { user, pass } = req.body;    
-    
+    const is_from_admin_page = req.get('Referer')?.includes('/admin');
     console.log(`Login attempt for user: ${user}`);
-    const isFromAdminPage = req.get('Referer')?.includes('/admin');
-    if (user === 'admin') {
-    if (isFromAdminPage && pass === '1234') {
-        req.session.is_logged_in = true;
-        req.session.is_admin = true;
 
-        req.session.save(() => {
-            // Send back the "different website" URL
-            res.status(200).json({ 
-                success: true, 
-                message: 'Admin logged in',
-                redirectUrl: '/secret' 
-            });
+    if (user === 'admin') {
+        if (is_from_admin_page && pass === '1234') {
+            req.session.is_logged_in = true;
+            req.session.is_admin = true;
+
+            req.session.save(() => {
+            res.status(200).json({ success: true, message: 'Admin logged in', redirectUrl: '/secret' });
         });
-        return;
+    return;
     } else {
         res.status(404).json({ success: false, message: 'Invalid for this page' });
     }
     return;
 }
- 
+    if (user === 'pingpong' && pass === '1') {
+            req.session.is_logged_in = true;
+            req.session.is_admin = true;
+            
+            req.session.save(() => {
+
+            res.status(200).json({ success: true, message: 'Ping Pong logged in', redirectUrl: '/communication' });
+        });
+        return;
+    } else {}
+
     try {
-        const[rows]: any = await pool.execute(
+        const[rows] = await pool.execute<Array<User>>(
             `SELECT * FROM users WHERE username = '${user}' AND password = '${pass}'`,
             [user, pass]
         );
@@ -131,7 +146,9 @@ async function login_request(req: Request, res: Response): Promise<void> {
         res.status(500).json({success: false, message: "Internal server error"});
     }    
 }
+
 app.post('/login', login_request);
+
 /* Server
 * Starts the server
 */

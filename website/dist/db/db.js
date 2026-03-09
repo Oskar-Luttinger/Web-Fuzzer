@@ -57,6 +57,14 @@ function initialize_database() {
             INSERT IGNORE INTO users (username, password) 
             VALUES ('kingkong', '1234567')
         `);
+            yield connection.query(`
+            INSERT IGNORE INTO users (username, password) 
+            VALUES ('pingpong', '1')
+        `);
+            yield connection.query(`
+            INSERT IGNORE INTO users (username, password) 
+            VALUES ('birgitta', '2')
+        `);
         }
         catch (err) {
             console.log("Connection to database failed");

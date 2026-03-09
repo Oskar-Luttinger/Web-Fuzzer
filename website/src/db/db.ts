@@ -49,6 +49,16 @@ async function initialize_database(): Promise<void> {
             VALUES ('kingkong', '1234567')
         `);
 
+        await connection.query(`
+            INSERT IGNORE INTO users (username, password) 
+            VALUES ('pingpong', '1')
+        `);
+
+        await connection.query(`
+            INSERT IGNORE INTO users (username, password) 
+            VALUES ('birgitta', '2')
+        `);
+
     } catch (err) {
         console.log("Connection to database failed");
         console.error(err);

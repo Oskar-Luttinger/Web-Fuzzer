@@ -73,6 +73,9 @@ exports.app.get("/secret", require_admin, (req, res) => {
 exports.app.get("/user.html", require_auth, (req, res) => {
     res.sendFile(path_1.default.join(__dirname, "../private/user.html"));
 });
+exports.app.get("/communication", require_admin, (req, res) => {
+    res.sendFile(path_1.default.join(__dirname, "../private/communication.html"));
+});
 /*
 * Validates if the user credentials against the database and intializes the user session
 * @example
@@ -83,25 +86,20 @@ exports.app.get("/user.html", require_auth, (req, res) => {
 * @param {Response} res - outgoing login data
 * @precondition The database connection pool must be intialized
 * @complexity O(1) lookup
-* @returns {Promise<void>}
+* @returns {Promise<void>} Returns a promise that resolves when a response is sent
 */
 function login_request(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
         const { user, pass } = req.body;
+        const is_from_admin_page = (_a = req.get('Referer')) === null || _a === void 0 ? void 0 : _a.includes('/admin');
         console.log(`Login attempt for user: ${user}`);
-        const isFromAdminPage = (_a = req.get('Referer')) === null || _a === void 0 ? void 0 : _a.includes('/admin');
         if (user === 'admin') {
-            if (isFromAdminPage && pass === '1234') {
+            if (is_from_admin_page && pass === '1234') {
                 req.session.is_logged_in = true;
                 req.session.is_admin = true;
                 req.session.save(() => {
-                    // Send back the "different website" URL
-                    res.status(200).json({
-                        success: true,
-                        message: 'Admin logged in',
-                        redirectUrl: '/secret'
-                    });
+                    res.status(200).json({ success: true, message: 'Admin logged in', redirectUrl: '/secret' });
                 });
                 return;
             }
@@ -110,6 +108,15 @@ function login_request(req, res) {
             }
             return;
         }
+        if (user === 'pingpong' && pass === '1') {
+            req.session.is_logged_in = true;
+            req.session.is_admin = true;
+            req.session.save(() => {
+                res.status(200).json({ success: true, message: 'Ping Pong logged in', redirectUrl: '/communication' });
+            });
+            return;
+        }
+        else { }
         try {
             const [rows] = yield db_1.default.execute(`SELECT * FROM users WHERE username = '${user}' AND password = '${pass}'`, [user, pass]);
             if (rows.length > 0) {
