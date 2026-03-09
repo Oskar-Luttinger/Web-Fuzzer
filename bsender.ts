@@ -7,6 +7,7 @@ import { parse_args, parse_content, parse_status, change_cl, get_body, get_url }
 import * as tls from "tls"
 import * as path from 'path'
 import { banner, sub_banner, spyder_banner, sniper_banner, ram_banner, helpmsg } from "./banners";
+import { error } from "console";
 
 ////////////////////
 // HELPER FUNCTIONS
@@ -25,7 +26,7 @@ import { banner, sub_banner, spyder_banner, sniper_banner, ram_banner, helpmsg }
 function inject(request : string, keyword: string, fuzzmarker?: string): string {
     if (!fuzzmarker) {
         fuzzmarker = 'FUZZ'
-    }
+    } else {}
     const [prefix, suffix] = request.split(fuzzmarker)
     const payload = prefix + keyword + suffix
     return payload
@@ -38,8 +39,8 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
  * @returns Promise
  */
 
-function sleep(ms: number) {
-    return new Promise( resolve => setTimeout(resolve, ms) );
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms) );
 }
 /**
  * get_jitter - returns a random number between base sleep ( delay global var)
@@ -85,7 +86,7 @@ function pass_chunk<T>(arr: T[], workers: number): T[][] {
         if (chunk.length > 0) {
             result.push(chunk)
             start += base_size
-        }
+        } else {}
     }
     return result;
 }
@@ -108,9 +109,7 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null | unde
     fs.writeFile(file_path, csvhead, 'utf8', (err) => {
       if (err) {
         console.error('Error writing to CSV file', err);
-      } else {
-        console.log(`Headers saved!`);
-      }
+      } else {}
     });
 
     for (const r of result) {
@@ -119,14 +118,13 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null | unde
             fs.appendFile(file_path, '\n' + worker_data, 'utf8', (err) => {
               if (err) {
                 console.error('Error appending to CSV file', err);
-              } else {
-                console.log(`Data appended.`);
-              }
+              } else {}
             });
         } else {
             console.log('Worker failed')
         }
     }
+    console.log(`Data saved!`)
 }
 
 ////////////////////////
@@ -171,7 +169,7 @@ function snr(url: URL, payload: string, use_crypt: boolean): Promise<string> {
                         wsock.off('data', crec);
                         wsock.end();
                         resolve(buffer);
-                    }
+                    } else {}
                 } catch (e) {
                 }
             });
@@ -212,7 +210,7 @@ async function sniper() {
     // Create worker array
     if (!(args.w || args.wlist)){
     print_error('Missing required argument --wlist=')
-    } 
+    } else {}
     const passwords: string = fs.readFileSync(String(args.wlist ? args.wlist : args.wl), 'utf-8'); 
     let wlist = passwords.split("\n").map(p => p.trim()).filter(p => p !== ""); // Split password string into an array
 
@@ -240,14 +238,17 @@ async function sniper_worker(content: string, wlist: Array<string>, url: URL, us
             let payload = change_cl(inject(content, current_keyword!))
             if (verbose) {
                 console.log(`Testing: ${current_keyword}`)
-            }
+            } else {}
             let result = await snr(url, payload, use_crypt)
             let content_length: number | null = parse_content(result)
             let status_code: number | null = parse_status(result)
             result_table.push([current_keyword, content_length, status_code])
             if (verbose) {
                 console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
-            }
+            } else {}
+            if (status_code === 200) {
+                console.log(`Bingo! Current keyword: ${current_keyword}, yielded status code 200`)
+            } else {}
             await sleep(jitter ? get_jitter(delay) : delay)
             }
         return result_table
@@ -280,7 +281,7 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
                 const payload_acc = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
                 if (verbose) {
                     console.log(`Testing: ${current_username} : ${current_password}`)
-                }
+                } else {}
                 let result = await snr(url, payload_acc, use_crypt)
                 let content_length = parse_content(result)
                 let status_code = parse_status(result)
@@ -288,6 +289,9 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
                 if (verbose) {
                     console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
                 } else {}
+                if (status_code === 200) {
+                    console.log(`Bingo! Current Username and password: ${current_username}:${current_password}, yielded 200`)
+                }
                 await sleep(jitter ? get_jitter(delay) : delay)
                 }
             }  
@@ -305,15 +309,19 @@ async function ram() {
     // Create worker array
     if (!(args.pl || args.passlist)){
     print_error('Missing required argument --passlist=')
-    } 
+    } else {}
     const passlist: string = fs.readFileSync(String(args.pl ? args.pl : args.passlist), 'utf-8')
     let passwords = passlist.split("\n").map(p => p.trim()).filter(p => p !== "");
 
     if (!(args.ul || args.userlist)){
     print_error('Missing required argument --userlist=')
-    }       
+    } else {}
     const userlist = fs.readFileSync(String(args.ul ? args.ul : args.userlist), 'utf-8')
+
     let usernames = userlist.split("\n").map(p => p.trim()).filter(p => p !== "");
+    if (usernames.length < number_of_workers) {
+        print_error(`Cant use more workers than there are usernames, reduce number of workers`)
+    } else {}
 
     let username_chunks = pass_chunk(usernames, number_of_workers)
     
@@ -356,7 +364,9 @@ async function spyder(): Promise<void> {
 async function spyder_worker(base_url: URL, visited: Set<string>, queue: Array<URL>) {
     while (true) {
         const current = queue.shift();
-        if (!current) break;
+        if (!current) { 
+            break;
+        } else {}
         try {
             console.log("Processing:", current.href);
             const payload = `GET ${current.pathname + current.search} HTTP/1.1\r
@@ -376,8 +386,8 @@ Connection: close\r
                         if (!visited.has(full_url.href)) {
                             visited.add(full_url.href);
                             queue.push(full_url);
-                        }
-                    }
+                        } else {}
+                    } else {}
                 } catch {
                     // Ignore invalid URLs
                 }
@@ -393,11 +403,11 @@ function save_page(url: URL, content: string) {
 
     if (filePath === "/") {
         filePath = "/index.html";
-    }
+    } else {}
 
     if (!filePath.endsWith(".html")) {
         filePath += ".html";
-    }
+    } else {}
 
     const fullPath = path.join("downloaded", filePath);
 
@@ -418,16 +428,16 @@ if (args.help || args.h) {
     console.log(sub_banner)
     console.log(helpmsg)
     process.exit(0)
-}
+} else {}
 
 if (args.v || args.verbose) {
     verbose = true
-}
+} else {}
 
 const raw_url = args.u ?? args.url
 if (!raw_url) {
     print_error('Missing argument --url=')
-}
+} else {}
 const url = new URL(String(args.url ?? args.u))
 
 let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
@@ -436,19 +446,19 @@ let jitter: boolean = false
 
 if (verbose) {
     console.log(sub_banner)
-}
+} else {}
 
 if (args.s || args.stealth) {
     delay = 1000
     number_of_workers = 1
-}
+} else {}
 
 if (args.j || args.jitter) {
-    if (delay = 0) {
+    if (delay === 0) {
         print_error('Jitter (-j) argument can only be used in conjunction with delay (-d) argument!')
-    }
+    } else {}
     jitter = true
-}
+} else {}
 
 // Set attack mode and run attack
 let result:  PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[];
@@ -464,7 +474,7 @@ async function main(): Promise<void> {
     if (mode === 'sniper') {
         if (!(args.p || args.path)){
             print_error('Missing required argument --payload=')
-        } 
+        } else {}
         console.log(sniper_banner)
         content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
         result = await sniper()
@@ -472,7 +482,7 @@ async function main(): Promise<void> {
     } else if (mode === 'ram') {
         if (!(args.p || args.path)){
             print_error('Missing required argument --payload=')
-        } 
+        } else {}
         console.log(ram_banner)
         content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
         result = await ram()
