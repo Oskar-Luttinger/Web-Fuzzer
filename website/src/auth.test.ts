@@ -1,6 +1,6 @@
 import request from 'supertest';
-import { app } from './src/server';
-import pool from './src/db/db';
+import { app } from './server';
+import pool from './db/db';
 
 // Stop the test from hitting the real database
 jest.mock('./src/db/db', () => ({

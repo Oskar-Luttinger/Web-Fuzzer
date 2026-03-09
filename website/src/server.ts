@@ -22,12 +22,15 @@ app.use('/images', express.static(path.join(__dirname, '../images')));
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/scripts', express.static(path.join(__dirname, '.')));
 
-/* Authorization check
-* If the user is logged in, the user can proceed to the requested page
-* If the user is not logged in, the user will get an unauthorized error message
+/* 
+* Verifies if a user session is active
+* @param {Request} req - The incoming request
+* @param {Response} res - The outgoing response
+* @param {NextFunction} - Triggers the next part of the chain
+* @returns {void}
 */
-const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-    if(req.session.isLoggedIn) {
+const require_auth = (req: Request, res: Response, next: NextFunction) => {
+    if(req.session.is_logged_in) {
         return next();
     } else {
         res.status(401).json({ succes: false, message: "unauthorized"})
@@ -39,19 +42,26 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 * Checks if the user has a valid session 
 * If the user does it sends the protected file
 */
-app.get("/dashboard", requireAuth, (req, res) => {
+app.get("/dashboard", require_auth, (req, res) => {
     res.sendFile(path.join(__dirname, "../private/website.html"));
 });
 
-app.get("/user.html", requireAuth, (req, res) => {
+app.get("/user.html", require_auth, (req, res) => {
     res.sendFile(path.join(__dirname, "../private/user.html"));
 });
 
-/* Login/Authentication controller
-* To lazy to comment rn
+/* 
+* Validates if the user credentials against the database and intializes the user session
+* @example 
+* POST /login {"user", "admin", "pass", "1234"}
+* @param {Request} req - the incomming login data
+* @param {Response} res - outgoing login data
+* @precondition The database connection pool must be intialized
+* @complexity O(1) lookup
+* @returns {Promise<void>}
 */ 
-app.post('/login', async (req, res) => {
-    const { user, pass } = req.body;
+app.post('/login', async (req: Request, res: Response): Promise<void> => {
+    const { user, pass } = req.body;    
 
     console.log(`Login attempt for user: ${user}`);
     try {
@@ -62,14 +72,14 @@ app.post('/login', async (req, res) => {
 
         if (rows.length > 0) {
             const dbUser = rows[0];
-            req.session.isLoggedIn = true;
+            req.session.is_logged_in = true;
             req.session.username = dbUser.username;
 
             req.session.save((err) => {
             
             if (err) {
                 return res.status(500).json({ success: false, message: 'Session error' });
-            }
+            } else {}
             res.status(200).json({ success: true, message: 'Success, logged in' });
         });
 
@@ -91,4 +101,4 @@ if (process.env.NODE_ENV !== 'test') {
         console.log(`Server is running!`);
         console.log(`Access the site at: http://127.0.0.1:${PORT}/`);
 });
-}
+} else {}
