@@ -20,7 +20,6 @@ export const sub_banner = `
 `
 
 
-
 export const helpmsg = `
 
     /‾‾\    
@@ -62,7 +61,7 @@ Wordlists & Inputs:
   -wl, --wordlist <path>     [SNIPER] Path to wordlist for single-parameter 
                              fuzzing.
   -ul, --userlist <path>     [RAM] Path to username wordlist.
-  -pl, --passlist <path>     [RAM/SNIPER] Path to password wordlist.
+  -pl, --passlist <path>     [RAM] Path to password wordlist.
 
 Execution Control:
   -w, --workers <num>        Number of concurrent workers, in ram mode: 
