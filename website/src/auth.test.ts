@@ -2,9 +2,11 @@ import request from 'supertest';
 import { app } from './server';
 import pool from './db/db';
 
-// Stop the test from hitting the real database
-jest.mock('./src/db/db', () => ({
+jest.mock('./db/db', () => ({
+    __esModule:true,
+    default: {
     execute: jest.fn()
+    }
 }));
 
 describe('Authentication API', () => {
@@ -15,12 +17,12 @@ describe('Authentication API', () => {
 
     it('should login successfully with correct credentials', async () => {
         (pool.execute as jest.Mock).mockResolvedValue([
-            [{ username: 'admin' }] 
+            [{ username: 'birgitta' }] 
         ]);
 
         const res = await request(app)
             .post('/login')
-            .send({ user: 'admin', pass: '1234' });
+            .send({ user: 'pinpong', pass: 'Ilovetabletennis' });
 
         expect(res.statusCode).toEqual(200);
         expect(res.body.success).toBe(true);

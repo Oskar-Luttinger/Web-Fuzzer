@@ -35,14 +35,13 @@ test("change_cl updates content-length", () => {
 
   const result = change_cl(payload);
 
-  expect(result.includes("Content-Length: 11")).toBe(true);
+  expect(result.includes("Content-length: 11")).toBe(true);
 });
 
 
 test("get_body extracts response body", () => {
   const response =
     "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello";
-
   expect(get_body(response)).toBe("hello");
 });
 

@@ -15,7 +15,7 @@ function pass_chunk<T>(arr: T[], workers: number): T[][] {
         const chunk = arr.slice(start, start + size)
         if (chunk.length > 0) {
             result.push(chunk)
-            start += base_size
+            start += size
         } else {}
     }
     return result;
