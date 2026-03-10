@@ -32,10 +32,7 @@ function inject(request : string, keyword: string, fuzzmarker?: string): string 
     return payload
 } 
 
-async function create_socket(
-    url: URL,
-    use_crypt: boolean
-): Promise<net.Socket | tls.TLSSocket> {
+async function create_socket(url: URL, use_crypt: boolean): Promise<net.Socket | tls.TLSSocket> {
     const port = url.port ? Number(url.port) : (use_crypt ? 443 : 80)
     const host = url.hostname
     return new Promise((resolve, reject) => {
@@ -175,59 +172,40 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null | unde
  * @param {boolean} use_crypt tls option false for no tls true for tls
  * @returns raw response http OR error message
  */
-function snr(
-    wsock: net.Socket | tls.TLSSocket,
-    payload: string
-): Promise<string> {
-
+function snr(wsock: net.Socket | tls.TLSSocket, payload: string): Promise<string> {
     return new Promise((resolve, reject) => {
-
         let buffer = ""
-
         const onData = (chunk: Buffer) => {
-
             buffer += chunk.toString("utf8")
-
             try {
-
-                const cl = Number(parse_content(buffer))
-
-                if (!isNaN(cl)) {
-
-                    const headerEnd = buffer.indexOf("\r\n\r\n")
-
-                    if (headerEnd !== -1) {
-
-                        const body = buffer.slice(headerEnd + 4)
-
-                        if (Buffer.byteLength(body) >= cl) {
-                            cleanup()
-                            resolve(buffer)
+                const cl = parse_content(buffer)
+                if (cl === null) {
+                    print_error('cl is nulL!')
+                } else {
+                    if (!isNaN(cl)) {
+                        const headerEnd = buffer.indexOf("\r\n\r\n")
+                        if (headerEnd !== -1) {
+                            const body = buffer.slice(headerEnd + 4)
+                            if (Buffer.byteLength(body) >= cl) {
+                                cleanup()
+                                resolve(buffer)
+                            }
                         }
-
                     }
-
                 }
-
             } catch {}
-
         }
-
         const onError = (err: Error) => {
             cleanup()
             reject(err)
         }
-
         const cleanup = () => {
             wsock.off("data", onData)
             wsock.off("error", onError)
         }
-
         wsock.on("data", onData)
         wsock.on("error", onError)
-
         wsock.write(payload)
-
     })
 
 }
@@ -266,39 +244,26 @@ async function sniper() {
  * @param {boolean} use_crypt tls options, true for use tls else false.
  * @returns a table of results from each sent message
  */
-export async function sniper_worker(
-    content: string,
-    wlist: string[],
-    url: URL,
-    use_crypt: boolean
-) {
-
+export async function sniper_worker(content: string,wlist: string[], url: URL, use_crypt: boolean) {
     const result_table: Array<string | number | null>[] = []
-
     let wsock = await create_socket(url, use_crypt)
-
     while (wlist.length > 0) {
-
         const current_keyword = wlist.shift()!
-
         let payload = change_cl(inject(content, current_keyword))
 
+        // Make sure that the payload har keep alive on
         payload = payload.replace(
             /Connection:\s*close/i,
             "Connection: keep-alive"
         )
 
         try {
-
             if (verbose) {
                 console.log(`Testing: ${current_keyword}`)
             }
-
             const result = await snr(wsock, payload)
-
             const content_length = parse_content(result)
             const status_code = parse_status(result)
-
             result_table.push([
                 current_keyword,
                 content_length,
@@ -306,30 +271,22 @@ export async function sniper_worker(
             ])
 
             if (status_code === 200) {
-                console.log(`Bingo! ${current_keyword}`)
+                console.log(`Bingo: ${current_keyword} yielded status code 200!`)
             }
 
         } catch (err) {
-
             if (verbose) {
                 console.log("Socket died, reconnecting...")
             }
-
             try {
                 wsock.destroy()
             } catch {}
-
             wsock = await create_socket(url, use_crypt)
-
             continue
         }
-
         await sleep(jitter ? get_jitter(delay) : delay)
-
     }
-
     wsock.end()
-
     return result_table
 
 }
@@ -347,150 +304,169 @@ export async function sniper_worker(
  * @complexity O(n*j) where n is length of userlist, j is length of passlist
  * @returns table of results for each request where each row contains [username, password, content length, status code]
  */
-//async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
-//    try {    
-//        let result_table = []
-//        while (userlist !== undefined && userlist.length > 0) {
-//            let current_username = userlist.shift()
-//            let payload = inject(content, current_username!, 'USERFUZZ')
-//            for(let i = 0; i < passlist.length; i += 1) {
-//                let current_password = passlist[i]
-//                const payload_acc = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
-//                if (verbose) {
-//                    console.log(`Testing: ${current_username} : ${current_password}`)
-//                } else {}
-//                let result = await snr(url, payload_acc, use_crypt)
-//                let content_length = parse_content(result)
-//                let status_code = parse_status(result)
-//                result_table.push([current_username, current_password, content_length, status_code])
-//                if (verbose) {
-//                    console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
-//                } else {}
-//                if (status_code === 200) {
-//                    console.log(`Bingo! Current Username and password: ${current_username}:${current_password}, yielded 200`)
-//                }
-//                await sleep(jitter ? get_jitter(delay) : delay)
-//                }
-//            }  
-//        return result_table
-//        }  catch (error) {
-//           console.log(error)
-//    }
-//}
-//
-///**
-// * ram - ram attack mode main function, used to create workers and run them in parallel
+async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
+        let result_table = []
+        let wsock = await create_socket(url, use_crypt)
+        while (userlist !== undefined && userlist.length > 0) {
+            let current_username = userlist.shift()
+            let payload = inject(content, current_username!, 'USERFUZZ')
+
+            for(let i = 0; i < passlist.length; i += 1) {
+                let current_password = passlist[i]
+                const payload_acc = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
+
+               try { if (verbose) {
+                        console.log(`Testing: ${current_username} : ${current_password}`)
+                    } else {}
+                    let result = await snr(wsock, payload_acc)
+                    let content_length = parse_content(result)
+                    let status_code = parse_status(result)
+                    result_table.push([
+                        current_username, 
+                        current_password, 
+                        content_length, 
+                        status_code])
+
+                    if (verbose) {
+                        console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
+                    } else {}
+
+                    if (status_code === 200) {
+                        console.log(`Bingo! Current Username and password: ${current_username}:${current_password}, yielded 200`)
+                    }
+                await sleep(jitter ? get_jitter(delay) : delay)
+                } catch (err) {
+                    if (verbose) {
+                        console.log("Socket died, reconnecting...")
+                    } else {}
+                    try {
+                        wsock.destroy()
+                    } catch {}
+                    wsock = await create_socket(url, use_crypt)
+                    continue
+        }
+              
+        return result_table
+    }
+    
+}
+}
+
+
+/**
+ * ram - ram attack mode main function, used to create workers and run them in parallel
 // * @returns {PromiseSettledResult} Result from running the worker functions in parallel 
 // */
-//async function ram() {
-//    // Create worker array
-//    if (!(args.pl || args.passlist)){
-//    print_error('Missing required argument --passlist=')
-//    } else {}
-//    const passlist: string = fs.readFileSync(String(args.pl ? args.pl : args.passlist), 'utf-8')
-//    let passwords = passlist.split("\n").map(p => p.trim()).filter(p => p !== "");
-//
-//    if (!(args.ul || args.userlist)){
-//    print_error('Missing required argument --userlist=')
-//    } else {}
-//    const userlist = fs.readFileSync(String(args.ul ? args.ul : args.userlist), 'utf-8')
-//
-//    let usernames = userlist.split("\n").map(p => p.trim()).filter(p => p !== "");
-//    if (usernames.length < number_of_workers) {
-//        print_error(`Cant use more workers than there are usernames, reduce number of workers`)
-//    } else {}
-//
-//    let username_chunks = pass_chunk(usernames, number_of_workers)
-//    
-//    // Create an array of function calls to ram_worker which will be an array of promises 
-//    // used in the call to Promise.allSettled
-//    const worker_promises = username_chunks.map((user_chunk) => {
-//        return ram_worker(content, user_chunk, passwords, url, url.protocol === 'https:' ? true : false);
-//    });
-//    let result = await Promise.allSettled(worker_promises)
-//    return result
-//}
-//
-////
+async function ram() {
+    // Create worker array
+    if (!(args.pl || args.passlist)){
+    print_error('Missing required argument --passlist=')
+    } else {}
+    const passlist: string = fs.readFileSync(String(args.pl ? args.pl : args.passlist), 'utf-8')
+    let passwords = passlist.split("\n").map(p => p.trim()).filter(p => p !== "");
+
+    if (!(args.ul || args.userlist)){
+    print_error('Missing required argument --userlist=')
+    } else {}
+    const userlist = fs.readFileSync(String(args.ul ? args.ul : args.userlist), 'utf-8')
+
+    let usernames = userlist.split("\n").map(p => p.trim()).filter(p => p !== "");
+    if (usernames.length < number_of_workers) {
+        print_error(`Cant use more workers than there are usernames, reduce number of workers`)
+    } else {}
+
+    let username_chunks = pass_chunk(usernames, number_of_workers)
+    
+    // Create an array of function calls to ram_worker which will be an array of promises 
+    // used in the call to Promise.allSettled
+    const worker_promises = username_chunks.map((user_chunk) => {
+        return ram_worker(content, user_chunk, passwords, url, url.protocol === 'https:' ? true : false);
+    });
+    let result = await Promise.allSettled(worker_promises)
+    return result
+}
+
 //////////////////////////
 ////// SPYDER FUNCTIONS
 /////////////////////////
 /////** spyder - spyder main function used to create worker promises and run them in parallel
 //// *  @returns void - saves all files the crawler finds in a download directory
 //// */
-//async function spyder(): Promise<void> {
-//    const queue: URL [] = [];
-//    const visited = new Set<string>();
-//    visited.add(url.href);
-//    queue.push(url);
-//    const workers = 5; // change to 10 or 20 if you want
-//    const workerPromises = [];
-//    for (let i = 0; i < workers; i++) {
-//        workerPromises.push(spyder_worker(url, visited, queue));
-//    }
-//    await Promise.all(workerPromises);
-//    console.log("Crawling finished");
-//}
-//
-///**
-// * spyder_worker - worker function for spyder attack mode 
-// * @param {URL} base_url url to the target website to crawl.
-// * @param {Set<string>} visited  a set of already visited endpoints
-// * @param {Array<URL>} queue an array of urls to visit
-// */
-//async function spyder_worker(base_url: URL, visited: Set<string>, queue: Array<URL>) {
-//    while (true) {
-//        const current = queue.shift();
-//        if (!current) { 
-//            break;
-//        } else {}
-//        try {
-//            console.log("Processing:", current.href);
-//            const payload = `GET ${current.pathname + current.search} HTTP/1.1\r
-//Host: ${base_url.host}\r
-//User-Agent: Mozilla/5.0\r
-//Connection: close\r
-//\r
-//`;
-//            const response = await snr(current, payload, base_url.protocol === 'https:' ? true : false);
-//            const body = get_body(response);
-//            save_page(current, body);
-//            const links = get_url(body);
-//            for (const link of links) {
-//                try {
-//                    const full_url = new URL(link, base_url);
-//                    if (full_url.host === base_url.host) {
-//                        if (!visited.has(full_url.href)) {
-//                            visited.add(full_url.href);
-//                            queue.push(full_url);
-//                        } else {}
-//                    } else {}
-//                } catch {
-//                    // Ignore invalid URLs
-//                }
-//            }
-//        } catch (err) {
-//            console.log("Worker error:", err);
-//        }
-//    }
-//}
-//
-//function save_page(url: URL, content: string) {
-//    let filePath = url.pathname;
-//
-//    if (filePath === "/") {
-//        filePath = "/index.html";
-//    } else {}
-//
-//    if (!filePath.endsWith(".html")) {
-//        filePath += ".html";
-//    } else {}
-//
-//    const fullPath = path.join("downloaded", filePath);
-//
-//    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-//    fs.writeFileSync(fullPath, content);
-//}
+async function spyder(): Promise<void> {
+    const queue: URL [] = [];
+    const visited = new Set<string>();
+    visited.add(url.href);
+    queue.push(url);
+    const workers = 5; // change to 10 or 20 if you want
+    const workerPromises = [];
+
+    for (let i = 0; i < workers; i++) {
+        workerPromises.push(spyder_worker(url, visited, queue));
+    }
+    await Promise.all(workerPromises);
+    console.log("Crawling finished");
+}
+
+/**
+ * spyder_worker - worker function for spyder attack mode 
+ * @param {URL} base_url url to the target website to crawl.
+ * @param {Set<string>} visited  a set of already visited endpoints
+ * @param {Array<URL>} queue an array of urls to visit
+ */
+async function spyder_worker(base_url: URL, visited: Set<string>, queue: Array<URL>) {
+    let wsock = await create_socket(base_url, url.port === '80' ? false : true)
+    while (true) {
+        const current = queue.shift();
+        if (!current) { 
+            break;
+        } else {}
+        try {
+            console.log("Processing:", current.href);
+            const payload = `GET ${current.pathname + current.search} HTTP/1.1\r
+Host: ${base_url.host}\r
+User-Agent: Mozilla/5.0\r
+Connection: close\r
+\r
+`;
+            const response = await snr(wsock, payload);
+            const body = get_body(response);
+            save_page(current, body);
+            const links = get_url(body);
+            for (const link of links) {
+                try {
+                    const full_url = new URL(link, base_url);
+                    if (full_url.host === base_url.host) {
+                        if (!visited.has(full_url.href)) {
+                            visited.add(full_url.href);
+                            queue.push(full_url);
+                        } else {}
+                    } else {}
+                } catch {
+                    // Ignore invalid URLs
+                }
+            }
+        } catch (err) {
+            console.log("Worker error:", err);
+        }
+    }
+}
+
+function save_page(url: URL, content: string) {
+    let filePath = url.pathname;
+
+    if (filePath === "/") {
+        filePath = "/index.html";
+    } else {}
+
+    if (!filePath.endsWith(".html")) {
+        filePath += ".html";
+    } else {}
+
+    const fullPath = path.join("downloaded", filePath);
+
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, content);
+}
 
 ///////////////
 // MAIN
@@ -499,18 +475,22 @@ console.log(banner)
 // Parse args and assign options to constants / variables
 const args = parse_args()
 let verbose: boolean = false
+
 if (args.help || args.h) {
     console.log(sub_banner)
     console.log(helpmsg)
     process.exit(0)
 } else {}
+
 if (args.v || args.verbose) {
     verbose = true
 } else {}
+
 const raw_url = args.u ?? args.url
 if (!raw_url) {
     print_error('Missing argument --url=')
 } else {}
+
 const url = new URL(String(args.url ?? args.u))
 let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
 let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
@@ -545,17 +525,19 @@ async function main(): Promise<void> {
         content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
         result = await sniper()
         save_to_csv(result)
+        
     } else if (mode === 'ram') {
         if (!(args.p || args.path)){
             print_error('Missing required argument --payload=')
         } else {}
         console.log(ram_banner)
         content = fs.readFileSync(String(args.p ? args.p : args.payload), 'utf-8'); 
-       // result = await ram()
-        //save_to_csv(result)
+        result = await ram()
+        save_to_csv(result)
+
     } else if (mode === 'spyder') {
         console.log(spyder_banner)
-        //await spyder()
+        await spyder()
     } else {
         print_error('Missing argument --mode=')
     }
