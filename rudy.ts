@@ -20,6 +20,7 @@ import { banner, sub_banner, spyder_banner, sniper_banner, ram_banner, helpmsg }
  * @param {string} request the request to inject the keyword into
  * @param {string} keyword the keyword to inject
  * @param {string} fuzzmarker a string inside the request to replace with the keyword
+ * @complexity O(n) where n is the length of the request
  * @returns string where fuzzmarker is replaced by a keyword
  */
 
@@ -79,7 +80,7 @@ function sleep(ms: number): Promise<void> {
 /**
  * get_jitter - returns a random number between base sleep ( delay global var)
  * and base sleep * 8
- * @param base_sleep 
+ * @param {number} base_sleep 
  * @returns number between base sleep and base sleep * 8
  */
 function get_jitter(base_sleep: number): number {
@@ -90,7 +91,7 @@ function get_jitter(base_sleep: number): number {
 
 /**
  * print_error - Prints out an error message and exits the program 
- * @param error error string to print
+ * @param {string} error error string to print
  */
 function print_error(error: string) {
     console.log(`ERROR: ${error}\n`)
@@ -102,8 +103,9 @@ function print_error(error: string) {
  * of the original array
  * @example pass_chunk([1, 2, 3, 4, 5, 6, 7, 8, 9], 3)
  *          results in [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
- * @param arr array to split
- * @param workers number of chunks / rows to split original array into
+ * @param {array} arr array to split
+ * @param {number} workers number of chunks / rows to split original array into
+ * @complexity O(n) where n is number of workers
  * @returns A table where each row is a section of arr 
  */
 
@@ -128,6 +130,8 @@ function pass_chunk<T>(arr: T[], workers: number): T[][] {
 /**
  * save_to_csv saves result from a Promise.Allsettled call table to a csv file,
  * @param {PromiseSettledResult} result A PromiseSettledResult eg. an array of records. 
+ * @complexity O(m x w) where m is length of the result array and w is the average number of rows in
+ *             each worker
  * @returns void - But it saves result to a new csv file 'output.csv unless args.output is defined. 
  */
 function save_to_csv(result: PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[]) {
@@ -190,7 +194,7 @@ function snr(wsock: net.Socket | tls.TLSSocket, payload: string): Promise<string
                             if (Buffer.byteLength(body) >= cl) {
                                 cleanup()
                                 resolve(buffer)
-                            }
+                            } else {}
                         }
                     }
                 }
@@ -218,7 +222,10 @@ function snr(wsock: net.Socket | tls.TLSSocket, payload: string): Promise<string
 
 /**
  * sniper - sniper attack mode main funciton, used to create workers and run them.
- * @returns Result from running the worker functions in parallel
+ * @returns a table of results from running the worker functions in parallel
+ *          nested inside a PromiseSettledResult array.
+ *          An element inside the result array looks like this: {status: Fulfilled | Rejected, value | reason : value}
+ *          
  */
 
 async function sniper() {
@@ -243,11 +250,13 @@ async function sniper() {
  * @param {Array} wlist the wordlist to inject from
  * @param {URL} url the url to the target site
  * @param {boolean} use_crypt tls options, true for use tls else false.
+ * @complexity O(n) where n is the length of the wordlist
  * @returns a table of results from each sent message
  */
 export async function sniper_worker(content: string,wlist: string[], url: URL, use_crypt: boolean) {
     const result_table: Array<string | number | null>[] = []
     let wsock = await create_socket(url, use_crypt)
+
     while (wlist.length > 0) {
         const current_keyword = wlist.shift()!
         let payload = change_cl(inject(content, current_keyword))
@@ -265,6 +274,7 @@ export async function sniper_worker(content: string,wlist: string[], url: URL, u
             const result = await snr(wsock, payload)
             const content_length = parse_content(result)
             const status_code = parse_status(result)
+
             result_table.push([
                 current_keyword,
                 content_length,
@@ -278,7 +288,7 @@ export async function sniper_worker(content: string,wlist: string[], url: URL, u
         } catch (err) {
             if (verbose) {
                 console.log("Socket died, reconnecting...")
-            }
+            } else {}
             try {
                 wsock.destroy()
             } catch {}
@@ -302,7 +312,7 @@ export async function sniper_worker(content: string,wlist: string[], url: URL, u
  * @param {Array} passlist list of passwords
  * @param {URL} url url to target website
  * @param {boolean} use_crypt tls option true for use tls false for no tls
- * @complexity O(n*j) where n is length of userlist, j is length of passlist
+ * @complexity O(n*m) where n is length of userlist, m is length of passlist
  * @returns table of results for each request where each row contains [username, password, content length, status code]
  */
 async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
@@ -334,8 +344,10 @@ async function ram_worker(content: string, userlist: Array<string>, passlist: Ar
             
                 if (status_code === 200) {
                     console.log(`Bingo! Current Username and password: ${current_username}:${current_password}, yielded 200`)
-                }
+                } else []
+
             await sleep(jitter ? get_jitter(delay) : delay)
+
             } catch (err) {
                 if (verbose) {
                     console.log("Socket died, reconnecting...")
@@ -361,6 +373,7 @@ async function ram() {
     if (!(args.pl || args.passlist)){
     print_error('Missing required argument --passlist=')
     } else {}
+
     const passlist: string = fs.readFileSync(String(args.pl ? args.pl : args.passlist), 'utf-8')
     let passwords = passlist.split("\n").map(p => p.trim()).filter(p => p !== "");
 
@@ -388,9 +401,10 @@ async function ram() {
 //////////////////////////
 ////// SPYDER FUNCTIONS
 /////////////////////////
-/////** spyder - spyder main function used to create worker promises and run them in parallel
-//// *  @returns void - saves all files the crawler finds in a download directory
-//// */
+
+/** spyder - spyder main function used to create worker promises and run them in parallel
+ *  @returns void - saves all files the crawler finds in a download directory
+ */
 async function spyder(): Promise<void> {
     const queue: URL [] = [];
     const visited = new Set<string>();
@@ -495,23 +509,28 @@ const url = new URL(String(args.url ?? args.u))
 let number_of_workers = args.w ? Number(args.w) : args.workers ? Number(args.workers) : 10
 let delay = args.d ? Number(args.d) : args.delay ? Number(args.delay)  : 0
 let jitter: boolean = false
+
 if (verbose) {
     console.log(sub_banner)
 } else {}
+
 if (args.s || args.stealth) {
     delay = 1000
     number_of_workers = 1
 } else {}
+
 if (args.j || args.jitter) {
     if (delay === 0) {
         print_error('Jitter (-j) argument can only be used in conjunction with delay (-d) argument!')
     } else {}
     jitter = true
 } else {}
+
 // Set attack mode and run attack
 let result:  PromiseSettledResult<(string | number | null | undefined)[][] | undefined>[];
 const mode = args.m ? args.m : args.mode
 let content : string
+
 /**
  * main - main function, chooses attackmode and saves result from attack to csv, 
  * only reason this is a function is in order to use await command.
