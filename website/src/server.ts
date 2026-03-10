@@ -28,11 +28,12 @@ app.use('/images', express.static(path.join(__dirname, '../images')));
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/scripts', express.static(path.join(__dirname, '.')));
 
-/* 
+/** 
 * Verifies if a user session is active
 * @param {Request} req - The incoming request
 * @param {Response} res - The outgoing response
 * @param {NextFunction} - Triggers the next part of the chain
+* @complexity Theta (1)
 * @returns {void}
 */
 const require_auth = (req: Request, res: Response, next: NextFunction) => {
@@ -42,7 +43,14 @@ const require_auth = (req: Request, res: Response, next: NextFunction) => {
         res.status(401).json({ succes: false, message: "unauthorized"})
     }
 };
-
+/** 
+* Verifies if a user session is active and is admin
+* @param {Request} req - The incoming request
+* @param {Response} res - The outgoing response
+* @param {NextFunction} - Triggers the next part of the chain
+* @complexity Theta (1)
+* @returns {void}
+*/
 const require_admin = (req: Request, res: Response, next: NextFunction) => {
     if(req.session.is_logged_in && req.session.is_admin) {
         return next();
@@ -84,7 +92,6 @@ app.get("/communication", require_admin, (req, res) => {
 * { "success": true, "message": "Success, logged in" }
 * @param {Request} req - the incomming login data
 * @param {Response} res - outgoing login data
-* @precondition The database connection pool must be intialized
 * @complexity O(1) lookup
 * @returns {Promise<void>} Returns a promise that resolves when a response is sent
 */ 
@@ -101,12 +108,13 @@ async function login_request(req: Request, res: Response): Promise<void> {
             req.session.save(() => {
             res.status(200).json({ success: true, message: 'Admin logged in', redirectUrl: '/secret' });
         });
-    return;
+        return;
     } else {
         res.status(404).json({ success: false, message: 'Invalid for this page' });
     }
-    return;
-}
+        return;
+    }
+
     if (user === 'pingpong' && pass === 'Ilovetabletennis') {
             req.session.is_logged_in = true; 
             req.session.is_admin = true;

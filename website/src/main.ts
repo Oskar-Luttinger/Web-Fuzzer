@@ -3,7 +3,7 @@ const staff_btn = document.querySelectorAll('.staff-btn');
 
 /**
  * Redirects the browser to the staff details page based on the buttons data-user attribute
- * @param {Event}
+ * @param {Event} the click event from the staff button
  * @returns {void}
  */
 function staff_button(event: Event): void {
@@ -12,9 +12,8 @@ function staff_button(event: Event): void {
     window.location.href = `user.html?id=${user_id}`;
 }
 
-/**
+/** 
  * Handles the login of the user by sending the information to the server
- * @preconditions Elements with the IDs username, password, message
  * @returns {Promise<void>} Resolves when the login attempt is complete
  */
 async function login_handler(): Promise<void> {
@@ -46,7 +45,7 @@ async function login_handler(): Promise<void> {
                 window.location.href = "../dashboard";
             }
          }, 1000);
-        }
+        } else {}
 
     } catch (error) {
         console.error("Connection failed:", error);

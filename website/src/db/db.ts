@@ -12,8 +12,7 @@ const pool = mysql.createPool ({
  * Establishes a connection the database, checks if users exist and if not inserts the database with default user accounts
  * @example 
  * initialize_database();
- * @precondition The database pool must be configured and the SQL server must be reachable
- * @complexity O(n) - n is the number of users to be read
+ * @complexity Theta(1)
  * @returns {Promise<void>} resolves when the server is up and running
 */
 async function initialize_database(): Promise<void> {
