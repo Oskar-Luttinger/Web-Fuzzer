@@ -147,7 +147,6 @@ function save_to_csv(result: PromiseSettledResult<(string | number | null | unde
     });
 
     for (const r of result) {
-        console.log(r)
         if (r.status === 'fulfilled') {
             const worker_data = r.value!.map(row => row.join(',')).join('\n');
             fs.appendFile(file_path, '\n' + worker_data, 'utf8', (err) => {
@@ -180,7 +179,9 @@ function snr(wsock: net.Socket | tls.TLSSocket, payload: string): Promise<string
             try {
                 const cl = parse_content(buffer)
                 if (cl === null) {
-                    print_error('cl is nulL!')
+                console.log(`${payload} yielded response where cl is nulL! Continuing`)
+                cleanup()
+                resolve(buffer)
                 } else {
                     if (!isNaN(cl)) {
                         const headerEnd = buffer.indexOf("\r\n\r\n")
@@ -305,51 +306,49 @@ export async function sniper_worker(content: string,wlist: string[], url: URL, u
  * @returns table of results for each request where each row contains [username, password, content length, status code]
  */
 async function ram_worker(content: string, userlist: Array<string>, passlist: Array<string> ,url: URL, use_crypt: boolean) {
-        let result_table = []
-        let wsock = await create_socket(url, use_crypt)
-        while (userlist !== undefined && userlist.length > 0) {
-            let current_username = userlist.shift()
-            let payload = inject(content, current_username!, 'USERFUZZ')
-
-            for(let i = 0; i < passlist.length; i += 1) {
-                let current_password = passlist[i]
-                const payload_acc = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
-
-               try { if (verbose) {
-                        console.log(`Testing: ${current_username} : ${current_password}`)
-                    } else {}
-                    let result = await snr(wsock, payload_acc)
-                    let content_length = parse_content(result)
-                    let status_code = parse_status(result)
-                    result_table.push([
-                        current_username, 
-                        current_password, 
-                        content_length, 
-                        status_code])
-
-                    if (verbose) {
-                        console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
-                    } else {}
-
-                    if (status_code === 200) {
-                        console.log(`Bingo! Current Username and password: ${current_username}:${current_password}, yielded 200`)
-                    }
-                await sleep(jitter ? get_jitter(delay) : delay)
-                } catch (err) {
-                    if (verbose) {
-                        console.log("Socket died, reconnecting...")
-                    } else {}
-                    try {
-                        wsock.destroy()
-                    } catch {}
-                    wsock = await create_socket(url, use_crypt)
-                    continue
-        }
-              
-        return result_table
-    }
+    let result_table = []
+    let wsock = await create_socket(url, use_crypt)
+    while (userlist !== undefined && userlist.length > 0) {
+        let current_username = userlist.shift()
+        let payload = inject(content, current_username!, 'USERFUZZ')
     
-}
+        for(let i = 0; i < passlist.length; i += 1) {
+            let current_password = passlist[i]
+            const payload_acc = change_cl(inject(payload, current_password!, 'PASSFUZZ'))
+        
+           try { if (verbose) {
+                    console.log(`Testing: ${current_username} : ${current_password}`)
+                } else {}
+                let result = await snr(wsock, payload_acc)
+                let content_length = parse_content(result)
+                let status_code = parse_status(result)
+                result_table.push([
+                    current_username, 
+                    current_password, 
+                    content_length, 
+                    status_code])
+                
+                if (verbose) {
+                    console.log(`Status_code: ${status_code}, Content_length: ${content_length}`)
+                } else {}
+            
+                if (status_code === 200) {
+                    console.log(`Bingo! Current Username and password: ${current_username}:${current_password}, yielded 200`)
+                }
+            await sleep(jitter ? get_jitter(delay) : delay)
+            } catch (err) {
+                if (verbose) {
+                    console.log("Socket died, reconnecting...")
+                } else {}
+                try {
+                    wsock.destroy()
+                } catch {}
+                wsock = await create_socket(url, use_crypt)
+                continue
+            }
+        }     
+    }
+    return result_table
 }
 
 
@@ -414,8 +413,8 @@ async function spyder(): Promise<void> {
  * @param {Array<URL>} queue an array of urls to visit
  */
 async function spyder_worker(base_url: URL, visited: Set<string>, queue: Array<URL>) {
-    let wsock = await create_socket(base_url, url.port === '80' ? false : true)
     while (true) {
+        let wsock = await create_socket(base_url, url.protocol === 'http:' ? false : true)
         const current = queue.shift();
         if (!current) { 
             break;
@@ -448,6 +447,7 @@ Connection: close\r
         } catch (err) {
             console.log("Worker error:", err);
         }
+        wsock.end()
     }
 }
 
