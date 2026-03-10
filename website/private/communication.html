@@ -5,56 +5,101 @@
 <title>Executive Communications</title>
 
 <style>
-body{
-    margin:0;
-    font-family: Arial, sans-serif;
-    background:#121217;
-    color:#ddd;
-}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
 
-header{
-    background:#1d1d26;
-    padding:20px;
-    border-bottom:2px solid #ff0000ff;
-}
+        body {
+            background-color: #0d0101;
+            color: #e6edf3;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+        }
 
-header h1{
-    margin:0;
-    color:#ff0000ff;
-}
+        header {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
 
-.container{
-    max-width:900px;
-    margin:auto;
-    padding:30px;
-}
+        h1 {
+            font-size: 2.8rem;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            color: #ff0000; 
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+        }
 
-.post{
-    background:#1b1b24;
-    border:1px solid #333;
-    padding:20px;
-    margin-bottom:25px;
-    border-radius:6px;
-}
+        .subtitle {
+            font-size: 1rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 10px;
+        }
 
-.meta{
-    font-size:13px;
-    color:#999;
-    margin-bottom:10px;
-}
+        .container {
+            width: 100%;
+            max-width: 850px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
 
-.comment{
-    margin-top:10px;
-    padding-left:15px;
-    border-left:3px solid #333;
-}
+        .post {
+            background: #160a0a;
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid #ff0000; 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
 
-footer{
-    text-align:center;
-    font-size:12px;
-    color:#777;
-    padding:20px;
-}
+        .post:hover {
+            border-color: #ff0000;
+            box-shadow: 0 0 25px rgba(255, 0, 0, 0.15);
+        }
+
+        .meta {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: #ff0000; 
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        p {
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: #d1d7dd;
+        }
+
+        .comment-section {
+            border-top: 1px solid #250a0a;
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
+        .comment {
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            padding-left: 15px;
+            color: #8b949e;
+        }
+
+        .comment b {
+            color: #ff4d4d;
+            font-weight: 600;
+            margin-right: 5px;
+        }
 </style>
 </head>
     <body>
